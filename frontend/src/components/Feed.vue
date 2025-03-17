@@ -10,6 +10,9 @@
   import { ref, onMounted } from 'vue'
   import axios from 'axios'
   import Post from '@/components/Post.vue'
+  import Paris from '@/assets/paris.jpg';
+  import Japan from '@/assets/japan.jpg';
+  import opm from '@/assets/opm.jpg';
   
   export default {
     name: 'MyFeed',
@@ -31,15 +34,15 @@
             {
               id: 1,
               username: "john_doe",
-              userAvatar: "https://via.placeholder.com/40",
-              mediaUrl: "https://via.placeholder.com/500",
+              userAvatar: opm,
+              mediaUrl: Paris,
               caption: "Exploring the Eiffel Tower!"
             },
             {
               id: 2,
               username: "jane_smith",
-              userAvatar: "https://via.placeholder.com/40",
-              mediaUrl: "https://via.placeholder.com/500",
+              userAvatar: opm,
+              mediaUrl: Japan,
               caption: "Beautiful sunset in Bali."
             }
           ]
