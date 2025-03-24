@@ -1,0 +1,25 @@
+
+services:
+  post:
+    build:
+      context: ./
+      dockerfile: post/Dockerfile
+
+    image: lilinggg/post:esd
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://postgres:root@post-db:5432/postdb
+      CLOUDINARY_CLOUD_NAME: dzex9mqkl
+      CLOUDINARY_API_KEY: 233698824311556
+      CLOUDINARY_API_SECRET: dMhJArOvb79qG5XVqtQqllI6h1E
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "5000:5000"  # External:Internal (post runs on port 5000)
+  post-db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: postdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+
+        
