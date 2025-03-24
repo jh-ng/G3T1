@@ -1,10 +1,10 @@
 # G3T1
 start frontend:
-# cd frontend
-# npm run dev
+1. cd frontend
+2. npm run dev
 
 start backend:
-# start docker desktop
-# go to docker-copose.yml, go to "images" field and replace with your docker username
-# cd backend
-# docker-compose up --build
+1. start docker desktop
+2. go to docker-copose.yml, go to "images" field and replace with your docker username
+3. cd backend
+4. docker-compose up --build
