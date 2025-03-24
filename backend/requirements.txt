@@ -1,0 +1,6 @@
+Flask
+Flask-Cors==5.0.0
+cloudinary
+python-dotenv
+Flask-SQLAlchemy
+psycopg2-binary
