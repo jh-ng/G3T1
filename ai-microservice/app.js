@@ -27,7 +27,7 @@ const getUserPreferences = async (userID) => {
 /**
  * Simulated function to get location data from the LOCATION microservice.
  */
-const getLocationData = async ({ fromLocation, toLocation, startDate, endDate, budget }) => {
+const getLocationData = async ({ fromLocation, toLocation, startDate, endDate, budget, tastePreferences }) => {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({
@@ -65,7 +65,7 @@ app.post('/api/itinerary', async (req, res) => {
 
     // Retrieve simulated user preferences and location data
     const tastePreferences = await getUserPreferences(effectiveUserID);
-    const locationData = await getLocationData({ fromLocation, toLocation, startDate, endDate, budget });
+    const locationData = await getLocationData({ fromLocation, toLocation, startDate, endDate, budget, tastePreferences });
 
     // Craft standardised prompt
     const prompt = `
