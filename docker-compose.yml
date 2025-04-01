@@ -1,0 +1,140 @@
+
+
+services:
+  kong-database:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: kong
+      POSTGRES_DB: kong
+      POSTGRES_PASSWORD: kongpass
+    volumes:
+      - kong_data:/var/lib/postgresql/data
+    networks:
+      - kong-net
+
+  kong-migration:
+    image: kong:latest
+    command: kong migrations bootstrap
+    depends_on:
+      - kong-database
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kongpass
+      KONG_PG_DATABASE: kong
+    networks:
+      - kong-net
+
+  kong:
+    image: kong:latest
+    depends_on:
+      - kong-database
+      - kong-migration
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kongpass
+      KONG_PG_DATABASE: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_LISTEN: 0.0.0.0:8000, 0.0.0.0:8443 ssl
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+      - "8444:8444"
+    networks:
+      - kong-net
+
+  auth-db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: authdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - auth_data:/var/lib/postgresql/data
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    container_name: auth-service
+    build: 
+      context: ./backend/Authentication
+      dockerfile: Dockerfile
+    environment:
+      - JWT_SECRET=your-secret-key-here
+      - JWT_ALGORITHM=HS256
+      - DB_HOST=auth-db
+      - DB_NAME=authdb
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    ports:
+      - "5001:5001"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - kong-net
+
+  post-service:
+    build: 
+      context: ./backend/post
+      dockerfile: Dockerfile
+    image: lilinggg/post:esd
+    restart: always
+    environment:
+      - JWT_SECRET=your-secret-key-here
+      - JWT_ALGORITHM=HS256
+      - DATABASE_URL=postgresql://postgres:root@post-db:5432/postdb
+      - CLOUDINARY_CLOUD_NAME=dzex9mqkl
+      - CLOUDINARY_API_KEY=233698824311556
+      - CLOUDINARY_API_SECRET=dMhJArOvb79qG5XVqtQqllI6h1E
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "5000:5000"
+    depends_on:
+      - post-db
+    networks:
+      - kong-net
+
+  post-db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: postdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    networks:
+      - kong-net
+    volumes:
+      - post_data:/var/lib/postgresql/data
+
+  user-service:
+    build: 
+      context: ./backend/User
+      dockerfile: Dockerfile
+    environment:
+      - JWT_SECRET=your-secret-key-here
+      - JWT_ALGORITHM=HS256
+    networks:
+      - kong-net
+
+networks:
+  kong-net:
+    name: g3t1_kong-net
+    driver: bridge
+
+volumes:
+  kong_data:
+  post_data:
+  auth_data: 

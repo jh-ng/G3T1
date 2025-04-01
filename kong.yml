@@ -1,0 +1,94 @@
+_format_version: "2.1"
+_transform: true
+
+services:
+  - name: auth-service
+    url: http://auth-service:5001
+    routes:
+      - name: auth-register
+        paths:
+          - /api/auth/register
+      - name: auth-login
+        paths:
+          - /api/auth/login
+      - name: auth-verify
+        paths:
+          - /api/auth/verify-token
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "http://localhost:8080"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - apikey
+            - Authorization
+          exposed_headers:
+            - Content-Length
+            - Content-Range
+          credentials: true
+          max_age: 3600
+      - name: jwt
+        config:
+          header_names: ["Authorization"]
+          claims_to_verify:
+            - exp
+          key_claim_name: kid
+          secret_is_base64: false
+          maximum_expiration: 86400
+          algorithm: HS256
+
+  - name: post-service
+    url: http://post-service:5000
+    routes:
+      - name: post-create
+        paths:
+          - /api/posts
+      - name: post-list
+        paths:
+          - /api/posts
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "http://localhost:8080"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - apikey
+            - Authorization
+          exposed_headers:
+            - Content-Length
+            - Content-Range
+          credentials: true
+          max_age: 3600
+      - name: jwt
+        config:
+          header_names: ["Authorization"]
+          claims_to_verify:
+            - exp
+          key_claim_name: kid
+          secret_is_base64: false
+          maximum_expiration: 86400
+          algorithm: HS256 

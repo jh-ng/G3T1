@@ -1,116 +1,141 @@
 from flask import Flask, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from uuid import uuid4
-from datetime import datetime
-import cloudinary
-import cloudinary.uploader
-from dotenv import load_dotenv
+import jwt
 import os
+from datetime import datetime
+import psycopg2
 
-# Load env variables
-load_dotenv()
-
-# Init Flask app
 app = Flask(__name__)
-
 CORS(app)
 
-# Setup DB (adjust connection string to your DB)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:root@post-db:5432/postdb')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+# Database configuration
+DB_CONFIG = {
+    'dbname': 'postgres',
+    'user': 'postgres',
+    'password': 'postgres',
+    'host': 'postgres',
+    'port': '5432'
+}
 
-# create table from post
-with app.app_context():
-    db.create_all()
+def get_db_connection():
+    return psycopg2.connect(**DB_CONFIG)
 
-# Configure Cloudinary
-cloudinary.config(
-    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
-    api_key=os.getenv('CLOUDINARY_API_KEY'),
-    api_secret=os.getenv('CLOUDINARY_API_SECRET')
-)
+def create_tables():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS posts (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            title VARCHAR(200) NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    cur.close()
+    conn.close()
 
-# DB model
-class Post(db.Model):
-    post_id = db.Column(db.String, primary_key=True, default=lambda: str(uuid4()))
-    user_id = db.Column(db.String, nullable=False)
-    content = db.Column(db.Text)
-    image_urls = db.Column(db.Text)  # Store as comma-separated URLs
-    created_at = db.Column(db.DateTime, default=datetime.now)
+def verify_token(token):
+    try:
+        payload = jwt.decode(
+            token,
+            os.getenv('JWT_SECRET', 'your-secret-key-here'),
+            algorithms=[os.getenv('JWT_ALGORITHM', 'HS256')]
+        )
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
 
-# Routes
-@app.route('/create-post', methods=['POST'])
+@app.route('/api/posts', methods=['POST'])
 def create_post():
-    user_id = request.form['user_id']
-    content = request.form.get('content', '')
-    images = request.files.getlist('images')
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'No token provided'}), 401
+    
+    token = auth_header.split(' ')[1]
+    payload = verify_token(token)
+    
+    if not payload:
+        return jsonify({'error': 'Invalid or expired token'}), 401
+    
+    data = request.get_json()
+    if not all(k in data for k in ['title', 'content']):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute('''
+            INSERT INTO posts (user_id, title, content)
+            VALUES (%s, %s, %s)
+            RETURNING id, title, content, created_at
+        ''', (payload['user_id'], data['title'], data['content']))
+        
+        post = cur.fetchone()
+        conn.commit()
+        
+        return jsonify({
+            'message': 'Post created successfully',
+            'post': {
+                'id': post[0],
+                'title': post[1],
+                'content': post[2],
+                'created_at': post[3].isoformat(),
+                'user_id': payload['user_id']
+            }
+        }), 201
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
 
-    # Upload images
-    image_urls = []
-    for img in images:
-        result = cloudinary.uploader.upload(img)
-        image_urls.append(result['secure_url'])
-
-    # Store post in DB
-    post = Post(
-        user_id=user_id,
-        content=content,
-        image_urls=','.join(image_urls)
-    )
-    db.session.add(post)
-    db.session.commit()
-
-    return jsonify({
-        'code': 201,
-        'message': 'Post created successfully.',
-        'data': {
-            'post_id': post.post_id,
-            'image_urls': image_urls
-        }
-    }), 201
-
-# Get all posts
-@app.route('/posts', methods=['GET'])
-def get_all_posts():
-    posts = Post.query.order_by(Post.created_at.desc()).all()
-    result = []
-    for post in posts:
-        result.append({
-            'post_id': post.post_id,
-            'user_id': post.user_id,
-            'content': post.content,
-            'image_urls': post.image_urls.split(','),
-            'created_at': post.created_at.isoformat()
-        })
-    return jsonify({
-        'code': 200,
-        'message': 'Posts retrieved successfully.',
-        'data': result
-    }), 200
-
-
-# Get posts by user_id
-@app.route('/posts/<user_id>', methods=['GET'])
-def get_posts_by_user(user_id):
-    posts = Post.query.filter_by(user_id=user_id).order_by(Post.created_at.desc()).all()
-    result = []
-    for post in posts:
-        result.append({
-            'post_id': post.post_id,
-            'user_id': post.user_id,
-            'content': post.content,
-            'image_urls': post.image_urls.split(','),
-            'created_at': post.created_at.isoformat()
-        })
-    return jsonify({
-        'code': 200,
-        'message': 'Posts retrieved successfully.',
-        'data': result
-    }), 200
+@app.route('/api/posts', methods=['GET'])
+def get_posts():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'No token provided'}), 401
+    
+    token = auth_header.split(' ')[1]
+    payload = verify_token(token)
+    
+    if not payload:
+        return jsonify({'error': 'Invalid or expired token'}), 401
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute('''
+            SELECT id, title, content, created_at, user_id
+            FROM posts
+            ORDER BY created_at DESC
+        ''')
+        
+        posts = cur.fetchall()
+        
+        return jsonify({
+            'posts': [{
+                'id': post[0],
+                'title': post[1],
+                'content': post[2],
+                'created_at': post[3].isoformat(),
+                'user_id': post[4]
+            } for post in posts]
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    create_tables()
+    app.run(host='0.0.0.0', port=5000)
