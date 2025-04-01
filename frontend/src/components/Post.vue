@@ -34,30 +34,36 @@
 </template>
 
 <script>
+import opm from '@/assets/opm.jpg'; // Import for test avatar
+
 export default {
   name: 'MyPost',
   props: {
     post: {
       type: Object,
       required: true,
-      validator: function(obj) {
-        return obj.username && obj.mediaUrl && obj.id !== undefined;
-      }
-    }
+      validator: function (obj) {
+        return obj.post_id && obj.user_id !== undefined;
+      },
+    },
+  },
+  data() {
+    return {
+      username: 'User', // Replace with a method to get the username.
+      userAvatar: opm, // Replace with a method to get the user avatar.
+    };
   },
   methods: {
     likePost() {
-      // Implement like functionality
-      this.$emit('like-post', this.post.id);
-      console.log('Liked post', this.post.id);
+      this.$emit('like-post', this.post.post_id);
+      console.log('Liked post', this.post.post_id);
     },
     commentPost() {
-      // Implement comment functionality
-      this.$emit('comment-post', this.post.id);
-      console.log('Comment on post', this.post.id);
-    }
-  }
-}
+      this.$emit('comment-post', this.post.post_id);
+      console.log('Comment on post', this.post.post_id);
+    },
+  },
+};
 </script>
 
 <style scoped>
