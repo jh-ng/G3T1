@@ -1,3 +1,4 @@
+
 # G3T1 Travel Planner
 
 ## Getting Started
@@ -107,4 +108,3 @@ docker-compose up -d
 ```bash
 docker-compose up -d --build
 ```
-
