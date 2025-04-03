@@ -3,14 +3,17 @@
     <v-app-bar color="primary">
       <v-app-bar-nav-icon variant="text" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
 
-      <v-toolbar-title>App name</v-toolbar-title>
+      <v-toolbar-title>Travel Planner</v-toolbar-title>
 
       <v-spacer></v-spacer>
 
-      <template v-if="$vuetify.display.mdAndUp">
-        <v-btn icon="mdi-magnify" variant="text"></v-btn>
-
-        <v-btn icon="mdi-filter" variant="text"></v-btn>
+      <template v-if="!isAuthenticated">
+        <v-btn to="/login" variant="text">Login</v-btn>
+        <v-btn to="/register" variant="text">Register</v-btn>
+      </template>
+      <template v-else>
+        <span class="mr-4">Welcome, {{ currentUser?.username }}</span>
+        <v-btn @click="handleLogout" variant="text">Logout</v-btn>
       </template>
       <!-- Notification Bell Icon -->
       <v-btn icon variant="text" @click="toggleNotificationPanel" class="notification-bell">
@@ -24,12 +27,12 @@
     <v-navigation-drawer v-model="drawer" temporary style="height: 100vh; display: flex; flex-direction: column">
       <v-list>
         <v-list-item to="/" title="Home"></v-list-item>
-        <v-list-item to="/itinerary" title="itinerary planner"></v-list-item>
+        <v-list-item to="/itinerary" title="Itinerary Planner"></v-list-item>
       </v-list>
       <v-divider></v-divider>
       <v-spacer></v-spacer>
       <div class="pa-4">
-        <v-btn rounded block color="primary"> Create Post </v-btn>
+        <v-btn rounded block color="primary">Create Post</v-btn>
       </div>
     </v-navigation-drawer>
     <!-- Notification Drawer -->
@@ -78,108 +81,49 @@
 </template>
 
 <script>
+import authService from './services/auth';
+
 export default {
   name: "App",
   data() {
     return {
       drawer: false,
-      notificationDrawer: false,
-      notifications: []
+      isAuthenticated: false,
+      currentUser: null
     }
   },
-  computed: {
-    unreadCount() {
-      return this.notifications.filter(notification => !notification.read).length;
-    }
+  created() {
+    this.checkAuth();
+    // Add event listener for storage changes
+    window.addEventListener('storage', this.checkAuth);
   },
-  mounted() {
-    // Simulate fetching notifications (to be replace with actual API call)
-    setTimeout(() => {
-      this.notifications = [
-        {
-          id: 1,
-          title: 'New Message',
-          message: 'You have received a new message from Alex',
-          timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-          read: false
-        },
-        {
-          id: 2,
-          title: 'System Update',
-          message: 'The system has been updated to version 2.0',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          read: false
-        },
-        {
-          id: 3,
-          title: 'Task Completed',
-          message: 'Your scheduled task has been completed successfully',
-          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-          read: true
-        },
-        {
-          id: 4,
-          title: 'Welcome',
-          message: 'Welcome to our application! Get started by exploring the dashboard',
-          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-          read: true
-        }
-      ];
-    }, 1000);
+  beforeUnmount() {
+    // Remove event listener
+    window.removeEventListener('storage', this.checkAuth);
   },
   methods: {
-    toggleNotificationPanel() {
-      this.notificationDrawer = !this.notificationDrawer;
-      if (this.drawer && this.notificationDrawer) {
-        this.drawer = false;
+    async checkAuth() {
+      this.isAuthenticated = authService.isAuthenticated();
+      if (this.isAuthenticated) {
+        this.currentUser = authService.getCurrentUser();
+        if (!this.currentUser) {
+          this.handleLogout();
+          return;
+        }
+        // Verify token validity
+        const isValid = await authService.verifyToken();
+        if (!isValid) {
+          this.handleLogout();
+        }
+      } else {
+        this.currentUser = null;
       }
     },
-    markAsRead(id) {
-      const notification = this.notifications.find(n => n.id === id);
-      if (notification && !notification.read) {
-        notification.read = true;
-        
-        // call an API to update the read status
-      
-      }
-    },
-    markAllAsRead() {
-      this.notifications.forEach(notification => {
-        notification.read = true;
-      });
-      
-      // Here call an API to update all statuses
-      
-    },
-    formatTime(timestamp) {
-      const now = new Date();
-      const diff = now - timestamp;
-      
-      // Less than a minute
-      if (diff < 60 * 1000) {
-        return 'Just now';
-      }
-      
-      // Less than an hour
-      if (diff < 60 * 60 * 1000) {
-        const minutes = Math.floor(diff / (60 * 1000));
-        return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-      }
-      
-      // Less than a day
-      if (diff < 24 * 60 * 60 * 1000) {
-        const hours = Math.floor(diff / (60 * 60 * 1000));
-        return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-      }
-      
-      // Less than a week
-      if (diff < 7 * 24 * 60 * 60 * 1000) {
-        const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-        return `${days} day${days > 1 ? 's' : ''} ago`;
-      }
-      
-      // Otherwise format as a date
-      return timestamp.toLocaleDateString();
+    handleLogout() {
+      authService.logout();
+      this.isAuthenticated = false;
+      this.currentUser = null;
+      this.$router.push('/login');
     }
   }
 };
@@ -200,5 +144,50 @@ export default {
 
 .notification-bell {
   position: relative;
+}
+
+.navbar {
+  background-color: #ffffff;
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar-brand a {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #4CAF50;
+  text-decoration: none;
+}
+
+.navbar-menu {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-link {
+  color: #666;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.nav-link:hover {
+  background-color: #f5f5f5;
+  color: #4CAF50;
+}
+
+.welcome-text {
+  color: #666;
+  margin-right: 1rem;
+}
+
+.router-link-active {
+  color: #4CAF50;
+  font-weight: bold;
 }
 </style>

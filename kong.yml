@@ -1,0 +1,91 @@
+_format_version: "2.1"
+_transform: true
+
+services:
+  - name: auth-service
+    url: http://auth-service:5001
+    routes:
+      - name: auth-register
+        paths:
+          - /api/auth/register
+        strip_path: false
+      - name: auth-login
+        paths:
+          - /api/auth/login
+        strip_path: false
+      - name: auth-verify
+        paths:
+          - /api/auth/verify-token
+        strip_path: false
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "http://localhost:8080"
+            - "http://localhost:8000"
+            - "http://localhost"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - apikey
+            - Authorization
+          exposed_headers:
+            - Content-Length
+            - Content-Range
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
+
+  - name: post-service
+    url: http://post-service:5000
+    routes:
+      - name: post-create
+        paths:
+          - /api/posts
+        strip_path: false
+      - name: post-list
+        paths:
+          - /api/posts
+        strip_path: false
+      - name: user-posts
+        paths:
+          - /api/posts/user/
+        strip_path: false
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "http://localhost:8080"
+            - "http://localhost:8000"
+            - "http://localhost"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - apikey
+            - Authorization
+          exposed_headers:
+            - Content-Length
+            - Content-Range
+          credentials: true
+          max_age: 3600
+          preflight_continue: false 

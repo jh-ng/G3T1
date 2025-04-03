@@ -1,25 +1,56 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import MyHome from '../views/Home.vue'
-import Landing from '../views/LandingView.vue'
+import HomePage from '../views/Home.vue'
+import MyLogin from '../views/Login.vue'
+import MyRegister from '../views/Register.vue'
+import authService from '../services/auth'
 
 const routes = [
   {
     path: '/',
     name: 'Home',
-    component: MyHome
+    component: HomePage
   },
   {
-    path: '/landing',
-    name: 'Landing',
-    component: Landing
-  }
+    path: '/login',
+    name: 'Login',
+    component: MyLogin,
+    meta: { requiresGuest: true }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: MyRegister,
+    meta: { requiresGuest: true }
+  },
+  {
+    path: '/create-post',
+    name: 'CreatePost',
+    component: () => import('../views/CreatePost.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/user/:id',
+    name: 'UserProfile',
+    component: () => import('../views/UserProfile.vue'),
+    meta: { requiresAuth: true }
+  },
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes,
-  scrollBehavior() {
-    return { top: 0 }
+  history: createWebHistory(process.env.BASE_URL),
+  routes
+})
+
+// Navigation guard
+router.beforeEach(async (to, from, next) => {
+  const isAuthenticated = authService.isAuthenticated();
+  
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    next('/login');
+  } else if (to.meta.requiresGuest && isAuthenticated) {
+    next('/');
+  } else {
+    next();
   }
 })
 
