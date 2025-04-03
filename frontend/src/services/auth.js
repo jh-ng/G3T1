@@ -31,8 +31,12 @@ class AuthService {
     });
     
     if (response.data.token) {
+      // Store token and user data
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // Set Authorization header for future requests
+      axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
     }
     
     return response.data;
@@ -41,10 +45,12 @@ class AuthService {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    delete axios.defaults.headers.common['Authorization'];
   }
 
   getCurrentUser() {
-    return JSON.parse(localStorage.getItem('user'));
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
   }
 
   getToken() {
@@ -52,7 +58,24 @@ class AuthService {
   }
 
   isAuthenticated() {
-    return !!this.getToken();
+    const token = this.getToken();
+    if (!token) return false;
+    
+    try {
+      // Check if token is expired
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      const payload = JSON.parse(jsonPayload);
+      const now = Date.now() / 1000;
+      
+      return payload.exp > now;
+    } catch (err) {
+      return false;
+    }
   }
 
   // Add method to verify token validity
