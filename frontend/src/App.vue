@@ -54,17 +54,29 @@ export default {
   },
   created() {
     this.checkAuth();
+    // Add event listener for storage changes
+    window.addEventListener('storage', this.checkAuth);
+  },
+  beforeUnmount() {
+    // Remove event listener
+    window.removeEventListener('storage', this.checkAuth);
   },
   methods: {
     async checkAuth() {
       this.isAuthenticated = authService.isAuthenticated();
       if (this.isAuthenticated) {
         this.currentUser = authService.getCurrentUser();
+        if (!this.currentUser) {
+          this.handleLogout();
+          return;
+        }
         // Verify token validity
         const isValid = await authService.verifyToken();
         if (!isValid) {
           this.handleLogout();
         }
+      } else {
+        this.currentUser = null;
       }
     },
     handleLogout() {

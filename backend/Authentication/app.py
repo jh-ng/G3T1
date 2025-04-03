@@ -7,7 +7,14 @@ import psycopg2
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:8080"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 # Database configuration
 DB_CONFIG = {
@@ -106,7 +113,7 @@ def login():
                 'username': user[1],
                 'exp': datetime.utcnow() + timedelta(days=1)
             },
-            os.getenv('JWT_SECRET', 'your-secret-key-here'),
+            os.getenv('JWT_SECRET', 'esd_jwt_secret_key'),
             algorithm=os.getenv('JWT_ALGORITHM', 'HS256')
         )
         
@@ -135,7 +142,7 @@ def verify_token():
     try:
         payload = jwt.decode(
             token,
-            os.getenv('JWT_SECRET', 'your-secret-key-here'),
+            os.getenv('JWT_SECRET', 'esd_jwt_secret_key'),
             algorithms=[os.getenv('JWT_ALGORITHM', 'HS256')]
         )
         return jsonify({'valid': True, 'user': payload}), 200

@@ -28,6 +28,12 @@ const routes = [
     component: () => import('../views/CreatePost.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/user/:id',
+    name: 'UserProfile',
+    component: () => import('../views/UserProfile.vue'),
+    meta: { requiresAuth: true }
+  },
 ]
 
 const router = createRouter({

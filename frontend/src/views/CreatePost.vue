@@ -3,7 +3,7 @@
     <v-card class="mx-auto" max-width="800">
       <v-card-title class="text-h5 mb-4">Create New Post</v-card-title>
       <v-card-text>
-        <v-form @submit.prevent="handleSubmit">
+        <v-form @submit.prevent="handleSubmit" enctype="multipart/form-data">
           <v-text-field
             v-model="title"
             label="Title"
@@ -21,12 +21,29 @@
             class="mb-4"
           ></v-textarea>
 
+          <v-file-input
+            v-model="image"
+            label="Upload Image"
+            accept="image/*"
+            prepend-icon="mdi-camera"
+            class="mb-4"
+          ></v-file-input>
+
+          <v-img
+            v-if="imagePreview"
+            :src="imagePreview"
+            max-height="200"
+            contain
+            class="mb-4"
+          ></v-img>
+
           <v-btn
             color="primary"
             type="submit"
             :loading="loading"
             :disabled="loading"
             block
+            class="mb-2"
           >
             {{ loading ? 'Creating Post...' : 'Create Post' }}
           </v-btn>
@@ -61,10 +78,25 @@ export default {
     return {
       title: '',
       content: '',
+      image: null,
+      imagePreview: null,
       loading: false,
       error: null,
       success: false
     };
+  },
+  watch: {
+    image(file) {
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          this.imagePreview = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        this.imagePreview = null;
+      }
+    }
   },
   methods: {
     async handleSubmit() {
@@ -79,16 +111,20 @@ export default {
           return;
         }
 
+        // Create FormData object
+        const formData = new FormData();
+        formData.append('title', this.title);
+        formData.append('content', this.content);
+        if (this.image) {
+          formData.append('image', this.image);
+        }
+
         const response = await fetch('http://localhost:8000/api/posts', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            title: this.title,
-            content: this.content
-          })
+          body: formData
         });
 
         if (!response.ok) {
@@ -102,6 +138,8 @@ export default {
         // Clear form
         this.title = '';
         this.content = '';
+        this.image = null;
+        this.imagePreview = null;
         
         // Redirect to home page after a short delay
         setTimeout(() => {

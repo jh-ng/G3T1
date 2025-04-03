@@ -8,17 +8,22 @@ services:
       - name: auth-register
         paths:
           - /api/auth/register
+        strip_path: false
       - name: auth-login
         paths:
           - /api/auth/login
+        strip_path: false
       - name: auth-verify
         paths:
           - /api/auth/verify-token
+        strip_path: false
     plugins:
       - name: cors
         config:
           origins:
             - "http://localhost:8080"
+            - "http://localhost:8000"
+            - "http://localhost"
           methods:
             - GET
             - POST
@@ -39,15 +44,7 @@ services:
             - Content-Range
           credentials: true
           max_age: 3600
-      - name: jwt
-        config:
-          header_names: ["Authorization"]
-          claims_to_verify:
-            - exp
-          key_claim_name: kid
-          secret_is_base64: false
-          maximum_expiration: 86400
-          algorithm: HS256
+          preflight_continue: false
 
   - name: post-service
     url: http://post-service:5000
@@ -55,14 +52,22 @@ services:
       - name: post-create
         paths:
           - /api/posts
+        strip_path: false
       - name: post-list
         paths:
           - /api/posts
+        strip_path: false
+      - name: user-posts
+        paths:
+          - /api/posts/user/
+        strip_path: false
     plugins:
       - name: cors
         config:
           origins:
             - "http://localhost:8080"
+            - "http://localhost:8000"
+            - "http://localhost"
           methods:
             - GET
             - POST
@@ -83,12 +88,4 @@ services:
             - Content-Range
           credentials: true
           max_age: 3600
-      - name: jwt
-        config:
-          header_names: ["Authorization"]
-          claims_to_verify:
-            - exp
-          key_claim_name: kid
-          secret_is_base64: false
-          maximum_expiration: 86400
-          algorithm: HS256 
+          preflight_continue: false 
