@@ -88,4 +88,4 @@ services:
             - Content-Range
           credentials: true
           max_age: 3600
-          preflight_continue: false 
+          preflight_continue: false
