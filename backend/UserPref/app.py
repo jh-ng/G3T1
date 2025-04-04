@@ -13,10 +13,10 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Serve the HTML form
-@app.route('/')
+# Serve the Vue form
+@app.route('/userPreference')
 def serve_home():
-    return send_from_directory(app.static_folder, 'user_preference.html')
+    return send_from_directory('frontend/src/views/UserPref.vue', 'UserPref.vue')
 
 
 # Submit user preferences (with JWT-based user ID)

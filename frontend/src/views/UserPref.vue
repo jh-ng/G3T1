@@ -106,7 +106,7 @@
   async function submitPreferences() {
   const token = localStorage.getItem('token'); // JWT from login
   const user_pref_payload = {
-    uid: user
+    uid: user,
     user_pref: form
   };
 
