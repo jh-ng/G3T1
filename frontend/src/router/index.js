@@ -34,6 +34,13 @@ const routes = [
     component: () => import('../views/UserProfile.vue'),
     meta: { requiresAuth: true }
   },
+
+  {
+    path: '/user-preference',
+    name: 'UserPreference',
+    component: () => import('../views/UserPref.vue'),
+    meta: {requiresAuth: true}
+  }
 ]
 
 const router = createRouter({
