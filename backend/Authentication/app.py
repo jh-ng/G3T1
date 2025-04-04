@@ -3,7 +3,7 @@ from flask_cors import CORS
 import jwt
 import os
 from datetime import datetime, timedelta
-import psycopg2
+from supabase import create_client, Client
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -16,34 +16,15 @@ CORS(app, resources={
     }
 })
 
-# Database configuration
-DB_CONFIG = {
-    'dbname': os.getenv('DB_NAME', 'authdb'),
-    'user': os.getenv('DB_USER', 'postgres'),
-    'password': os.getenv('DB_PASSWORD', 'postgres'),
-    'host': os.getenv('DB_HOST', 'auth-db'),
-    'port': '5432'
-}
+# Initialize Supabase client
+supabase_url = os.environ.get("SUPABASE_URL", "your-supabase-url")
+supabase_key = os.environ.get("SUPABASE_KEY", "your-supabase-anon-key")
+supabase: Client = create_client(supabase_url, supabase_key)
 
-def get_db_connection():
-    return psycopg2.connect(**DB_CONFIG)
+# Define the table name for authentication
+AUTHENTICATION_TABLE = "users"
 
-def create_tables():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(50) UNIQUE NOT NULL,
-            email VARCHAR(100) UNIQUE NOT NULL,
-            password_hash VARCHAR(200) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    cur.close()
-    conn.close()
-
+# User Registration (POST)
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -51,43 +32,41 @@ def register():
     if not all(k in data for k in ['username', 'email', 'password']):
         return jsonify({'error': 'Missing required fields'}), 400
     
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
     try:
         # Check if username or email already exists
-        cur.execute('SELECT username, email FROM users WHERE username = %s OR email = %s',
-                   (data['username'], data['email']))
-        if cur.fetchone():
+        response = supabase.table(AUTHENTICATION_TABLE).select('username, email').or_(
+            f"username.eq.{data['username']},email.eq.{data['email']}"
+        ).execute()
+        
+        if response.data:
             return jsonify({'error': 'Username or email already exists'}), 400
         
-        # Hash password and insert user
+        # Hash password
         password_hash = generate_password_hash(data['password'])
-        cur.execute('''
-            INSERT INTO users (username, email, password_hash)
-            VALUES (%s, %s, %s)
-            RETURNING id, username, email
-        ''', (data['username'], data['email'], password_hash))
         
-        user = cur.fetchone()
-        conn.commit()
+        # Insert new user
+        response = supabase.table(AUTHENTICATION_TABLE).insert({
+            "username": data['username'],
+            "email": data['email'],
+            "password_hash": password_hash
+        }).execute()
+        
+        user = response.data[0]
         
         return jsonify({
             'message': 'User registered successfully',
             'user': {
-                'id': user[0],
-                'username': user[1],
-                'email': user[2]
+                'id': user['id'],
+                'username': user['username'],
+                'email': user['email'],
+                'created_at': user['created_at']
             }
         }), 201
         
     except Exception as e:
-        conn.rollback()
         return jsonify({'error': str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
 
+# User Login & JWT Token Generation (POST)
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -95,22 +74,26 @@ def login():
     if not all(k in data for k in ['username', 'password']):
         return jsonify({'error': 'Missing required fields'}), 400
     
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
     try:
-        cur.execute('SELECT id, username, password_hash FROM users WHERE username = %s',
-                   (data['username'],))
-        user = cur.fetchone()
+        # Get user by username
+        response = supabase.table(AUTHENTICATION_TABLE).select('id, username, password_hash').eq(
+            'username', data['username']
+        ).execute()
         
-        if not user or not check_password_hash(user[2], data['password']):
+        if not response.data:
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        user = response.data[0]
+        
+        # Verify password
+        if not check_password_hash(user['password_hash'], data['password']):
             return jsonify({'error': 'Invalid credentials'}), 401
         
         # Generate JWT token
         token = jwt.encode(
             {
-                'user_id': user[0],
-                'username': user[1],
+                'user_id': user['id'],
+                'username': user['username'],
                 'exp': datetime.utcnow() + timedelta(days=1)
             },
             os.getenv('JWT_SECRET', 'esd_jwt_secret_key'),
@@ -120,17 +103,15 @@ def login():
         return jsonify({
             'token': token,
             'user': {
-                'id': user[0],
-                'username': user[1]
+                'id': user['id'],
+                'username': user['username']
             }
         }), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
 
+# Verify JWT Token (GET)
 @app.route('/api/auth/verify-token', methods=['GET'])
 def verify_token():
     auth_header = request.headers.get('Authorization')
@@ -152,5 +133,4 @@ def verify_token():
         return jsonify({'error': 'Invalid token'}), 401
 
 if __name__ == '__main__':
-    create_tables()
-    app.run(host='0.0.0.0', port=5001) 
+    app.run(host='0.0.0.0', port=5001)

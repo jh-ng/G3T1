@@ -4,29 +4,25 @@ import json
 import logging
 from supabase import create_client, Client
 from datetime import datetime
-import firebase_admin
-from firebase_admin import credentials, auth
+import jwt
 from functools import wraps
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(name)
 
-app = Flask(__name__)
+app = Flask(name)
 
 # Initialize Supabase client
 supabase_url = os.environ.get("SUPABASE_URL")
 supabase_key = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
-# Initialize Firebase Admin SDK for server-side verification
-# You'll need to download your Firebase service account JSON from Firebase console
-cred_path = os.environ.get("FIREBASE_CREDENTIALS_PATH", "./firebase-credentials.json")
-cred = credentials.Certificate(cred_path)
-firebase_admin.initialize_app(cred)
+# JWT secret key - should match the one used by authentication service
+JWT_SECRET = os.environ.get("JWT_SECRET")
 
 # JWT Validation Middleware
-def validate_firebase_token(f):
+def validate_jwt_token(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # Get the Authorization header
@@ -40,11 +36,11 @@ def validate_firebase_token(f):
         token = auth_header.split('Bearer ')[1]
         
         try:
-            # Verify the token with Firebase
-            decoded_token = auth.verify_id_token(token)
+            # Verify the token
+            decoded_token = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
             
             # Add the decoded token to the request for use in route handlers
-            request.firebase_user = decoded_token
+            request.user = decoded_token
             
             return f(*args, **kwargs)
         except Exception as e:
@@ -59,107 +55,63 @@ def health_check():
 
 
 # ==============================
-# USER REGISTRATION (CREATE)
+# USER CREATION (Internal API for Auth Service)
 # ==============================
-@app.route('/api/user/register', methods=['POST'])
-@validate_firebase_token
-def register_user():
+@app.route('/api/internal/user/create', methods=['POST'])
+def create_user():
+    """
+    Internal API endpoint for the authentication service to call after creating a user.
+    This endpoint should only be accessible by the authentication service,
+    not directly by clients.
+    """
+    # In production, add additional security like API keys or internal network restrictions
     data = request.json
-    firebase_user = request.firebase_user
     
-    # Validate that the Firebase UID matches the one in the token
-    if data.get("uid") != firebase_user["uid"]:
-        return jsonify({"error": "UID mismatch between token and request"}), 403
-
     # Validate required fields
-    required_fields = ["uid", "email"]
+    required_fields = ["user_id", "email"]
     for field in required_fields:
         if field not in data:
             return jsonify({"error": f"Missing required field: {field}"}), 400
 
     try:
         # Check if user already exists
-        check_result = supabase.table("users").select("*").eq("user_id", data["uid"]).execute()
+        check_result = supabase.table("users").select("*").eq("user_id", data["user_id"]).execute()
         
         if len(check_result.data) > 0:
             return jsonify({"message": "User already exists", "user": check_result.data[0]}), 200
             
-        # Insert new user into database
+        # Insert new user into database with minimal information
         user_data = {
-            "user_id": data["uid"],  # Using user_id to match your Supabase column
+            "user_id": data["user_id"],
             "email": data["email"],
-            "username": data.get("username", data["email"].split("@")[0]),  # Default to part of email if not provided
+            "username": data.get("username", data["email"].split("@")[0]),  # Default to part of email
             "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-            "display_name": data.get("display_name", ""),
-            "dark_mode": data.get("dark_mode", False)
+            "updated_at": datetime.now().isoformat()
         }
         
         result = supabase.table("users").insert(user_data).execute()
 
         if len(result.data) == 0:
-            return jsonify({"error": "Failed to register user"}), 500
+            return jsonify({"error": "Failed to create user"}), 500
 
-        return jsonify({"message": "User registered successfully", "user": result.data[0]}), 201
+        return jsonify({"message": "User created successfully", "user": result.data[0]}), 201
 
     except Exception as e:
-        logger.error(f"Error registering user: {str(e)}")
-        return jsonify({"error": f"Error registering user: {str(e)}"}), 500
-
-
-# ==============================
-# USER LOGIN (JWT Validated by Firebase)
-# ==============================
-@app.route("/api/user/login", methods=["POST"])
-@validate_firebase_token
-def user_login():
-    # Get UID from the validated Firebase token
-    uid = request.firebase_user["uid"]
+        logger.error(f"Error creating user: {str(e)}")
+        return jsonify({"error": f"Error creating user: {str(e)}"}), 500
     
-    try:
-        # Check if the user exists in Supabase
-        result = supabase.table("users").select("*").eq("user_id", uid).execute()
-
-        if len(result.data) == 0:
-            # User authenticated with Firebase but not in Supabase
-            # This is a good place to auto-create the user in Supabase
-            user_data = {
-                "user_id": uid,
-                "email": request.firebase_user["email"],
-                "username": request.firebase_user.get("email", "").split("@")[0],
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat(),
-                "display_name": request.firebase_user.get("name", ""),
-                "dark_mode": False
-            }
-            
-            new_user = supabase.table("users").insert(user_data).execute()
-            
-            if len(new_user.data) == 0:
-                return jsonify({"error": "Failed to create user record"}), 500
-                
-            return jsonify({"message": "User profile created", "user": new_user.data[0]}), 201
-
-        return jsonify({"message": "Login successful", "user": result.data[0]}), 200
-
-    except Exception as e:
-        logger.error(f"Error during login: {str(e)}")
-        return jsonify({"error": f"Error during login: {str(e)}"}), 500
-
-
 # ==============================
 # GET USER INFO (READ)
 # ==============================
-@app.route("/api/user/<uid>", methods=["GET"])
-@validate_firebase_token
-def get_user(uid):
+@app.route("/api/user/<user_id>", methods=["GET"])
+@validate_jwt_token
+def get_user(user_id):
     # Ensure user can only access their own data
-    if uid != request.firebase_user["uid"]:
-        # You can comment this out if you want admins to access any user
+    if user_id != request.user["sub"]:  # 'sub' is standard JWT claim for subject (user ID)
         return jsonify({"error": "Unauthorized access"}), 403
         
     try:
-        result = supabase.table("users").select("*").eq("user_id", uid).execute()
+        result = supabase.table("users").select("*").eq("user_id", user_id).execute()
 
         if len(result.data) == 0:
             return jsonify({"error": "User not found"}), 404
@@ -174,11 +126,11 @@ def get_user(uid):
 # ==============================
 # UPDATE USER INFO (UPDATE)
 # ==============================
-@app.route("/api/user/<uid>", methods=["PUT"])
-@validate_firebase_token
-def update_user(uid):
+@app.route("/api/user/<user_id>", methods=["PUT"])
+@validate_jwt_token
+def update_user(user_id):
     # Ensure user can only update their own data
-    if uid != request.firebase_user["uid"]:
+    if user_id != request.user["sub"]:
         return jsonify({"error": "Unauthorized access"}), 403
         
     data = request.json
@@ -188,7 +140,7 @@ def update_user(uid):
     
     try:
         # Check if user exists
-        check_result = supabase.table("users").select("*").eq("user_id", uid).execute()
+        check_result = supabase.table("users").select("*").eq("user_id", user_id).execute()
         
         if len(check_result.data) == 0:
             return jsonify({"error": "User not found"}), 404
@@ -201,7 +153,7 @@ def update_user(uid):
             del data["user_id"]
             
         # Update user information
-        result = supabase.table("users").update(data).eq("user_id", uid).execute()
+        result = supabase.table("users").update(data).eq("user_id", user_id).execute()
         
         if len(result.data) == 0:
             return jsonify({"error": "Failed to update user"}), 500
@@ -216,22 +168,22 @@ def update_user(uid):
 # ==============================
 # DELETE USER (DELETE)
 # ==============================
-@app.route("/api/user/<uid>", methods=["DELETE"])
-@validate_firebase_token
-def delete_user(uid):
+@app.route("/api/user/<user_id>", methods=["DELETE"])
+@validate_jwt_token
+def delete_user(user_id):
     # Ensure user can only delete their own account
-    if uid != request.firebase_user["uid"]:
+    if user_id != request.user["sub"]:
         return jsonify({"error": "Unauthorized access"}), 403
         
     try:
         # Check if user exists
-        check_result = supabase.table("users").select("*").eq("user_id", uid).execute()
+        check_result = supabase.table("users").select("*").eq("user_id", user_id).execute()
         
         if len(check_result.data) == 0:
             return jsonify({"error": "User not found"}), 404
             
         # Delete the user
-        result = supabase.table("users").delete().eq("user_id", uid).execute()
+        result = supabase.table("users").delete().eq("user_id", user_id).execute()
         
         if len(result.data) == 0:
             return jsonify({"error": "Failed to delete user"}), 500
@@ -247,11 +199,12 @@ def delete_user(uid):
 # LIST ALL USERS - Admin only endpoint
 # ==============================
 @app.route("/api/users", methods=["GET"])
-@validate_firebase_token
+@validate_jwt_token
 def list_users():
     # This should be restricted to admin users only
-    # You would need to add admin role verification here
-    # For now, we're keeping it simple
+    # Check if user has admin role in the JWT
+    if not request.user.get("roles", []) or "admin" not in request.user.get("roles", []):
+        return jsonify({"error": "Unauthorized. Admin access required"}), 403
     
     try:
         # Optional pagination parameters
@@ -267,49 +220,5 @@ def list_users():
         return jsonify({"error": f"Error listing users: {str(e)}"}), 500
 
 
-# ==============================
-# SYNC FIREBASE USER TO SUPABASE
-# ==============================
-@app.route("/api/user/sync", methods=["POST"])
-@validate_firebase_token
-def sync_firebase_user():
-    # Get user data from the validated Firebase token
-    uid = request.firebase_user["uid"]
-    email = request.firebase_user["email"]
-    
-    # Additional data can come from the request body
-    data = request.json or {}
-    
-    try:
-        # Check if user already exists in Supabase
-        check_result = supabase.table("users").select("*").eq("user_id", uid).execute()
-        
-        # If user exists, just return success
-        if len(check_result.data) > 0:
-            return jsonify({"message": "User already synchronized", "user": check_result.data[0]}), 200
-            
-        # Create new user record in Supabase
-        user_data = {
-            "user_id": uid,
-            "email": email,
-            "username": data.get("username", email.split("@")[0]),
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-            "display_name": data.get("display_name", ""),
-            "dark_mode": data.get("dark_mode", False)
-        }
-        
-        result = supabase.table("users").insert(user_data).execute()
-        
-        if len(result.data) == 0:
-            return jsonify({"error": "Failed to sync user"}), 500
-            
-        return jsonify({"message": "User synchronized successfully", "user": result.data[0]}), 201
-        
-    except Exception as e:
-        logger.error(f"Error syncing user: {str(e)}")
-        return jsonify({"error": f"Error syncing user: {str(e)}"}), 500
-
-
-if __name__ == '__main__':
+if name == 'main':
     app.run(host='0.0.0.0', port=5001, debug=True)
