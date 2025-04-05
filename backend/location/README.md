@@ -1,6 +1,6 @@
 1) Run the following two commands to start server:
-docker build -t google-places-service .
-docker run -p 5000:5000 --env-file .env google-places-service
+docker build -t location-service .
+docker run -p 4500:4500 location-service
 
 2) Request query should look like:
 {
