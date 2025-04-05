@@ -1,20 +1,45 @@
-# Use an official Node.js runtime as the base image
-FROM node:14
+# Build stage
+FROM node:18-alpine AS builder
 
-# Set the working directory in the container
+# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json (if available)
+# Copy package files
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
 
-# Copy the rest of your application code
+# Copy source code
 COPY . .
 
-# Expose the port that the app listens on
-EXPOSE 5000
+# Production stage
+FROM node:18-alpine
 
-# Define the command to run your app
+# Create non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Set working directory
+WORKDIR /app
+
+# Copy built application from builder stage
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/server.js ./
+COPY --from=builder /app/.env ./
+
+# Set ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose the port
+EXPOSE 4500
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:4500/health || exit 1
+
+# Start the application
 CMD ["node", "server.js"]

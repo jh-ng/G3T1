@@ -35,8 +35,8 @@ app.post('/search', async (req, res) => {
   }
 });
 
-// Start the server on the specified port (default: 5000)
-const PORT = process.env.PORT;
+// Start the server on the specified port (default: 4500)
+const PORT = process.env.PORT || 4500;
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
