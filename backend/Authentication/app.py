@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import jwt
 import os
+import requests
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -24,6 +25,9 @@ supabase: Client = create_client(supabase_url, supabase_key)
 # Define the table name for authentication
 AUTHENTICATION_TABLE = "users"
 
+# Kong API Gateway URL (adjust as needed)
+KONG_URL = os.environ.get("KONG_URL", "http://localhost:8000")
+
 # User Registration (POST)
 @app.route('/api/auth/register', methods=['POST'])
 def register():
@@ -44,14 +48,43 @@ def register():
         # Hash password
         password_hash = generate_password_hash(data['password'])
         
-        # Insert new user
+        # Insert new user in auth database
         response = supabase.table(AUTHENTICATION_TABLE).insert({
             "username": data['username'],
             "email": data['email'],
             "password_hash": password_hash
         }).execute()
         
+        if not response.data:
+            return jsonify({'error': 'Failed to register user'}), 500
+            
         user = response.data[0]
+        
+        # Now create a user record in the user service through Kong
+        try:
+            # Prepare the data to send to user service
+            user_data = {
+                "user_id": user['id'],
+                "email": user['email'],
+                "username": user['username']
+            }
+            
+            # Send request to user service through Kong
+            user_service_response = requests.post(
+                f"{KONG_URL}/api/internal/user/create",
+                json=user_data,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            # Check if user creation in user service was successful
+            if user_service_response.status_code not in (200, 201):
+                # If user service fails, we should log this but still return success
+                # as the auth part worked
+                print(f"Warning: User service creation failed: {user_service_response.text}")
+        
+        except Exception as e:
+            # Log error but don't fail the registration if user service is unavailable
+            print(f"Error creating user in user service: {str(e)}")
         
         return jsonify({
             'message': 'User registered successfully',

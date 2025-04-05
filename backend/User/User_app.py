@@ -2,10 +2,11 @@ from flask import Flask, request, jsonify
 import os
 import json
 import logging
+import requests
 from supabase import create_client, Client
 from datetime import datetime
 import jwt
-from functools import wraps
+from functools import wraps  # Added import for wraps
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -37,10 +38,28 @@ def verify_token(token):
         print("Invalid token")  # Debug log
         return None
 
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'No token provided'}), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = verify_token(token)
+        
+        if not payload:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+            
+        request.user = payload
+        return f(*args, **kwargs)
+    return decorated
+
+# This endpoint is called by the auth service through Kong
 @app.route('/api/internal/user/create', methods=['POST'])
 def create_user():
     data = request.json
-    required_fields = ["user_id", "email"]
+    required_fields = ["user_id", "email", "username"]
     for field in required_fields:
         if field not in data:
             return jsonify({"error": f"Missing required field: {field}"}), 400
@@ -54,7 +73,7 @@ def create_user():
         user_data = {
             "user_id": data["user_id"],
             "email": data["email"],
-            "username": data.get("username", data["email"].split("@")[0]),
+            "username": data["username"],
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat()
         }
@@ -71,8 +90,10 @@ def create_user():
         return jsonify({"error": f"Error creating user: {str(e)}"}), 500
 
 @app.route("/api/user/<user_id>", methods=["GET"])
+@token_required
 def get_user(user_id):
-    if user_id != request.user["sub"]:
+    # Check if the user is requesting their own profile
+    if user_id != str(request.user["user_id"]):
         return jsonify({"error": "Unauthorized access"}), 403
     
     try:
@@ -87,8 +108,10 @@ def get_user(user_id):
         return jsonify({"error": f"Error fetching user: {str(e)}"}), 500
 
 @app.route("/api/user/<user_id>", methods=["PUT"])
+@token_required
 def update_user(user_id):
-    if user_id != request.user["sub"]:
+    # Check if the user is updating their own profile
+    if user_id != str(request.user["user_id"]):
         return jsonify({"error": "Unauthorized access"}), 403
     
     data = request.json
@@ -117,8 +140,10 @@ def update_user(user_id):
         return jsonify({"error": f"Error updating user: {str(e)}"}), 500
 
 @app.route("/api/user/<user_id>", methods=["DELETE"])
+@token_required
 def delete_user(user_id):
-    if user_id != request.user["sub"]:
+    # Check if the user is deleting their own profile
+    if user_id != str(request.user["user_id"]):
         return jsonify({"error": "Unauthorized access"}), 403
     
     try:
@@ -138,5 +163,5 @@ def delete_user(user_id):
         logger.error(f"Error deleting user: {str(e)}")
         return jsonify({"error": f"Error deleting user: {str(e)}"}), 500
 
-if __name__ == 'main':
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)

@@ -89,3 +89,54 @@ services:
           credentials: true
           max_age: 3600
           preflight_continue: false
+
+  # User Service
+  - name: user-service
+    url: http://user-service:5001
+    routes:
+      - name: user-routes
+        paths:
+          - /api/user
+        strip_path: false
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+      - name: internal-user-routes
+        paths:
+          - /api/internal/user
+          - /api/internal/user/create  # Added specific path for user creation
+        strip_path: false
+        methods:
+          - POST
+          - OPTIONS
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "http://localhost:8080"
+            - "http://localhost:8000"  # Added this origin to match other services
+            - "http://localhost"       # Added this origin to match other services
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept            # Added these headers to match other services
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - apikey
+            - Authorization
+          exposed_headers:      # Added these to match other services
+            - Content-Length
+            - Content-Range
+          credentials: true
+          max_age: 3600
+          preflight_continue: false  # Added this to match other services
