@@ -6,7 +6,7 @@ import requests
 from supabase import create_client, Client
 from datetime import datetime
 import jwt
-from functools import wraps  # Added import for wraps
+from functools import wraps
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +21,9 @@ supabase: Client = create_client(supabase_url, supabase_key)
 
 # Define the table name for users
 USER_TABLE = "users"
+
+# Kong API Gateway URL
+KONG_URL = os.environ.get("KONG_URL", "http://localhost:8000")
 
 def verify_token(token):
     try:
@@ -75,7 +78,8 @@ def create_user():
             "email": data["email"],
             "username": data["username"],
             "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat()
+            "updated_at": datetime.now().isoformat(),
+            "taste_preferences": {}  # Initialize empty taste preferences
         }
         
         result = supabase.table(USER_TABLE).insert(user_data).execute()
@@ -106,6 +110,26 @@ def get_user(user_id):
     except Exception as e:
         logger.error(f"Error fetching user: {str(e)}")
         return jsonify({"error": f"Error fetching user: {str(e)}"}), 500
+
+@app.route("/api/user/<user_id>/taste-preferences", methods=["GET"])
+@token_required
+def get_taste_preferences(user_id):
+    # Check if the user is requesting their own taste preferences
+    if user_id != str(request.user["user_id"]):
+        return jsonify({"error": "Unauthorized access"}), 403
+    
+    try:
+        result = supabase.table(USER_TABLE).select("taste_preferences").eq("user_id", user_id).execute()
+
+        if len(result.data) == 0:
+            return jsonify({"error": "User not found"}), 404
+
+        # Return the taste_preferences as a JSON object
+        taste_preferences = result.data[0].get("taste_preferences", {})
+        return jsonify({"taste_preferences": taste_preferences}), 200
+    except Exception as e:
+        logger.error(f"Error fetching taste preferences: {str(e)}")
+        return jsonify({"error": f"Error fetching taste preferences: {str(e)}"}), 500
 
 @app.route("/api/user/<user_id>", methods=["PUT"])
 @token_required
@@ -147,15 +171,33 @@ def delete_user(user_id):
         return jsonify({"error": "Unauthorized access"}), 403
     
     try:
+        # First check if user exists
         check_result = supabase.table(USER_TABLE).select("*").eq("user_id", user_id).execute()
         
         if len(check_result.data) == 0:
             return jsonify({"error": "User not found"}), 404
         
+        # Delete the user from the user service database
         result = supabase.table(USER_TABLE).delete().eq("user_id", user_id).execute()
         
         if len(result.data) == 0:
-            return jsonify({"error": "Failed to delete user"}), 500
+            return jsonify({"error": "Failed to delete user from user service"}), 500
+        
+        # After successful deletion from user service, request deletion from auth service through Kong
+        try:
+            auth_header = request.headers.get('Authorization')
+            auth_service_response = requests.delete(
+                f"{KONG_URL}/api/auth/user/{user_id}",
+                headers={"Authorization": auth_header}
+            )
+            
+            # Log the auth service response but continue regardless
+            logger.info(f"Auth service deletion response: {auth_service_response.status_code} - {auth_service_response.text}")
+            
+            # Return success even if auth deletion fails, since that should be handled separately
+            # and not block the user deletion in the user service
+        except Exception as e:
+            logger.error(f"Error communicating with auth service for user deletion: {str(e)}")
         
         return jsonify({"message": "User deleted successfully"}), 200
         

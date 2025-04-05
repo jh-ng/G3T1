@@ -17,6 +17,13 @@ services:
         paths:
           - /api/auth/verify-token
         strip_path: false
+      - name: auth-delete-user  # New route for deleting user from auth service
+        paths:
+          - /api/auth/user/
+        strip_path: false
+        methods:
+          - DELETE
+          - OPTIONS
     plugins:
       - name: cors
         config:
@@ -104,6 +111,13 @@ services:
           - PUT
           - DELETE
           - OPTIONS
+      - name: user-taste-preferences  # New route for taste preferences
+        paths:
+          - /api/user/
+        strip_path: false
+        methods:
+          - GET
+          - OPTIONS
       - name: internal-user-routes
         paths:
           - /api/internal/user
@@ -117,8 +131,8 @@ services:
         config:
           origins:
             - "http://localhost:8080"
-            - "http://localhost:8000"  # Added this origin to match other services
-            - "http://localhost"       # Added this origin to match other services
+            - "http://localhost:8000"
+            - "http://localhost"
           methods:
             - GET
             - POST
@@ -126,7 +140,7 @@ services:
             - DELETE
             - OPTIONS
           headers:
-            - Accept            # Added these headers to match other services
+            - Accept
             - Accept-Version
             - Content-Length
             - Content-MD5
@@ -134,9 +148,9 @@ services:
             - Date
             - apikey
             - Authorization
-          exposed_headers:      # Added these to match other services
+          exposed_headers:
             - Content-Length
             - Content-Range
           credentials: true
           max_age: 3600
-          preflight_continue: false  # Added this to match other services
+          preflight_continue: false

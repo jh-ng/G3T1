@@ -6,6 +6,7 @@ import requests
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 app = Flask(__name__)
 CORS(app, resources={
@@ -27,6 +28,37 @@ AUTHENTICATION_TABLE = "users"
 
 # Kong API Gateway URL (adjust as needed)
 KONG_URL = os.environ.get("KONG_URL", "http://localhost:8000")
+
+# JWT verification and token_required decorator
+def verify_token(token):
+    try:
+        payload = jwt.decode(
+            token,
+            os.getenv('JWT_SECRET', 'esd_jwt_secret_key'),
+            algorithms=[os.getenv('JWT_ALGORITHM', 'HS256')]
+        )
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'No token provided'}), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = verify_token(token)
+        
+        if not payload:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+            
+        request.user = payload
+        return f(*args, **kwargs)
+    return decorated
 
 # User Registration (POST)
 @app.route('/api/auth/register', methods=['POST'])
@@ -146,7 +178,7 @@ def login():
 
 # Verify JWT Token (GET)
 @app.route('/api/auth/verify-token', methods=['GET'])
-def verify_token():
+def verify_token_endpoint():
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'error': 'No token provided'}), 401
@@ -164,6 +196,34 @@ def verify_token():
         return jsonify({'error': 'Token has expired'}), 401
     except jwt.InvalidTokenError:
         return jsonify({'error': 'Invalid token'}), 401
+
+# Delete user from auth database (DELETE)
+# This endpoint will be called by the user service after it deletes the user
+@app.route('/api/auth/user/<user_id>', methods=['DELETE'])
+@token_required
+def delete_user(user_id):
+    # Check if the user is deleting their own account
+    if user_id != str(request.user["user_id"]):
+        return jsonify({"error": "Unauthorized access"}), 403
+    
+    try:
+        # Check if user exists
+        check_result = supabase.table(AUTHENTICATION_TABLE).select("*").eq("id", user_id).execute()
+        
+        if len(check_result.data) == 0:
+            return jsonify({"error": "User not found in auth database"}), 404
+        
+        # Delete user from auth database
+        result = supabase.table(AUTHENTICATION_TABLE).delete().eq("id", user_id).execute()
+        
+        if len(result.data) == 0:
+            return jsonify({"error": "Failed to delete user from auth database"}), 500
+        
+        return jsonify({"message": "User deleted successfully from auth database"}), 200
+        
+    except Exception as e:
+        print(f"Error deleting user from auth database: {str(e)}")
+        return jsonify({"error": f"Error deleting user from auth database: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
