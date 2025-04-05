@@ -14,7 +14,7 @@
           placeholder="Select your travel style"
           multiple
         />
-      </div>
+      </div> 
   
       <!-- Tourist Sites -->
       <div class="form-section">
@@ -71,15 +71,13 @@
   
   <script setup>
   import authService from '@/services/auth';
-
   import vSelect from "vue-select";
   import "vue-select/dist/vue-select.css";
-  
   import Multiselect from 'vue-multiselect'
   import 'vue-multiselect/dist/vue-multiselect.min.css'
-  
   import { reactive } from 'vue'
   
+  const token = authService.getToken();
   const currentUser = authService.getCurrentUser();
   const user = currentUser.id 
   
@@ -111,7 +109,7 @@
   };
 
   try {
-    const res = await fetch('http://localhost:5000/submit', {
+    const res = await fetch('http://localhost:5001/submit', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -122,7 +120,7 @@
 
     const result = await res.json();
     if (res.ok) {
-      alert('✨ Preferences saved successfully!');
+      alert('Preferences saved successfully!');
     } else {
       alert('Error: ' + result.error);
     }

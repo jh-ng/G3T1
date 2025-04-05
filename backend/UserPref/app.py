@@ -13,11 +13,6 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Serve the Vue form
-@app.route('/userPreference')
-def serve_home():
-    return send_from_directory('frontend/src/views/UserPref.vue', 'UserPref.vue')
-
 
 # Submit user preferences (with JWT-based user ID)
 @app.route('/submit', methods=['POST'])
@@ -33,7 +28,6 @@ def submit():
         # Update row in 'users' table where userId matches uid
         result = supabase.table('users').update({
             "taste_preferen": user_pref,
-            "updated_at": datetime.now().isoformat()
         }).eq("userId", uid).execute()
 
         return jsonify({"message": "Preferences saved successfully."}), 200
@@ -43,4 +37,4 @@ def submit():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(host='0.0.0.0', port=5001, debug=True)
