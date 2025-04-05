@@ -20,27 +20,13 @@ services:
     networks:
       - kong-net
 
-  auth-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: authdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - auth_data:/var/lib/postgresql/data
-    networks:
-      - kong-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   auth-service:
     container_name: auth-service
     build: 
       context: ./backend/Authentication
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/Authentication/.env
     environment:
       - JWT_SECRET=esd_jwt_secret_key
       - JWT_ALGORITHM=HS256
@@ -61,6 +47,8 @@ services:
       context: ./backend/post
       dockerfile: Dockerfile
     restart: always
+    env_file:
+      - ./backend/post/.env
     environment:
       - JWT_SECRET=esd_jwt_secret_key
       - JWT_ALGORITHM=HS256
@@ -69,10 +57,6 @@ services:
       - DB_PASSWORD=root
       - DB_HOST=post-db
       - DB_PORT=5432
-      - CLOUDINARY_CLOUD_NAME=dzex9mqkl
-      - CLOUDINARY_API_KEY=233698824311556
-      - CLOUDINARY_API_SECRET=dMhJArOvb79qG5XVqtQqllI6h1E
-      - PYTHONUNBUFFERED=1
     ports:
       - "5000:5000"
     depends_on:
@@ -101,6 +85,8 @@ services:
     build: 
       context: ./backend/User
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/User/.env
     environment:
       - JWT_SECRET=esd_jwt_secret_key
       - JWT_ALGORITHM=HS256
@@ -115,4 +101,4 @@ networks:
 volumes:
   kong_data:
   post_data:
-  auth_data: 
+  auth_data:

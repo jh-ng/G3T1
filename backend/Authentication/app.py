@@ -7,6 +7,10 @@ from datetime import datetime, timedelta
 from supabase import create_client, Client
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={
@@ -18,9 +22,14 @@ CORS(app, resources={
     }
 })
 
-# Initialize Supabase client
-supabase_url = os.environ.get("SUPABASE_URL", "your-supabase-url")
-supabase_key = os.environ.get("SUPABASE_KEY", "your-supabase-anon-key")
+# Initialize Supabase client with environment variables
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+
+# Validate that environment variables are set
+if not supabase_url or not supabase_key:
+    print("Warning: SUPABASE_URL or SUPABASE_KEY not set properly")
+    
 supabase: Client = create_client(supabase_url, supabase_key)
 
 # Define the table name for authentication
