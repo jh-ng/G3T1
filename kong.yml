@@ -17,6 +17,13 @@ services:
         paths:
           - /api/auth/verify-token
         strip_path: false
+      - name: auth-delete-user  # New route for deleting user from auth service
+        paths:
+          - /api/auth/user/
+        strip_path: false
+        methods:
+          - DELETE
+          - OPTIONS
     plugins:
       - name: cors
         config:
@@ -88,4 +95,62 @@ services:
             - Content-Range
           credentials: true
           max_age: 3600
-          preflight_continue: false 
+          preflight_continue: false
+
+  # User Service
+  - name: user-service
+    url: http://user-service:5001
+    routes:
+      - name: user-routes
+        paths:
+          - /api/user
+        strip_path: false
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+      - name: user-taste-preferences  # New route for taste preferences
+        paths:
+          - /api/user/
+        strip_path: false
+        methods:
+          - GET
+          - OPTIONS
+      - name: internal-user-routes
+        paths:
+          - /api/internal/user
+          - /api/internal/user/create  # Added specific path for user creation
+        strip_path: false
+        methods:
+          - POST
+          - OPTIONS
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "http://localhost:8080"
+            - "http://localhost:8000"
+            - "http://localhost"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - apikey
+            - Authorization
+          exposed_headers:
+            - Content-Length
+            - Content-Range
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
