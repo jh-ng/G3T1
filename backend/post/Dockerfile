@@ -1,13 +1,15 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install additional required packages
-RUN pip install --no-cache-dir psycopg2-binary flask-cors cloudinary python-dotenv
+COPY post.py .
 
-COPY . .
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=post.py
+
+EXPOSE 5000
 
 CMD ["python", "post.py"]
