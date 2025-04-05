@@ -13,6 +13,7 @@
           :options="travelStyles"
           placeholder="Select your travel style"
           multiple
+          :class="{ 'required-warning': triedSubmit && !form.travel_style.length }"
         />
       </div> 
   
@@ -24,6 +25,7 @@
           :options="touristSites"
           placeholder="Select preferred sites"
           multiple
+          :class="{ 'required-warning': triedSubmit && !form.tourist_sites.length }"
         />
       </div>
   
@@ -36,6 +38,7 @@
           placeholder="Select dietary restrictions"
           multiple
           @update:modelValue="checkAllergy"
+          :class="{ 'required-warning': triedSubmit && !form.diet.length }"
         />
       </div>
   
@@ -53,13 +56,17 @@
       <!-- Start Time -->
       <div class="form-section">
         <label>What time do you prefer starting your day?</label>
-        <input type="time" v-model="form.start_time" />
+        <input type="time" v-model="form.start_time" 
+        :class="{ 'required-warning': triedSubmit && !form.start_time }"
+        />
       </div>
   
       <!-- End Time -->
       <div class="form-section">
         <label>What time do you prefer your day to end?</label>
-        <input type="time" v-model="form.end_time" />
+        <input type="time" v-model="form.end_time" 
+        :class="{ 'required-warning': triedSubmit && !form.end_time }"
+        />
       </div>
   
       <!-- Submit -->
@@ -75,8 +82,9 @@
   import "vue-select/dist/vue-select.css";
   import Multiselect from 'vue-multiselect'
   import 'vue-multiselect/dist/vue-multiselect.min.css'
-  import { reactive } from 'vue'
+  import { reactive, ref } from 'vue'
   
+  const triedSubmit = ref(false)
   const token = authService.getToken();
   const currentUser = authService.getCurrentUser();
   const user = currentUser.id 
@@ -102,6 +110,20 @@
   }
   
   async function submitPreferences() {
+    triedSubmit.value = true
+
+      if (
+        !form.travel_style.length ||
+        !form.tourist_sites.length ||
+        !form.diet.length ||
+        !form.start_time ||
+        !form.end_time ||
+        (form.diet.includes('Allergy') && !form.allergy_detail.length)
+      ) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
   const token = localStorage.getItem('token'); // JWT from login
   const user_pref_payload = {
     uid: user,
