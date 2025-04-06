@@ -37,19 +37,7 @@
           :options="dietOptions"
           placeholder="Select dietary restrictions"
           multiple
-          @update:modelValue="checkAllergy"
           :class="{ 'required-warning': triedSubmit && !form.diet.length }"
-        />
-      </div>
-  
-      <!-- Allergy Dropdown -->
-      <div class="form-section" v-if="form.diet.includes('Allergy')">
-        <label>Please specify your allergy:</label>
-        <v-select
-          multiple
-          v-model="form.allergy_detail"
-          :options="allergyOptions"
-          placeholder="Select specific allergies"
         />
       </div>
   
@@ -93,22 +81,15 @@
     travel_style: [],
     tourist_sites: [],
     diet: [],
-    allergy_detail: '',
     start_time: '',
     end_time: ''
   })
   
   const travelStyles = ['Active', 'Cultural', 'Family', 'Shopping', 'Solo']
   const touristSites = ['Nature Sites', 'Cultural Sites', 'Leisure Attractions', 'Sports Activities']
-  const dietOptions = ['Halal', 'Vegetarian', 'Kosher', 'Allergy', 'None']
-  const allergyOptions = ['Milk', 'Peanuts', 'Seafood']
+  const dietOptions = ['Halal', 'Vegetarian', 'Kosher', 'None']
   
-  function checkAllergy() {
-    if (!form.diet.includes('Allergy')) {
-      form.allergy_detail = []
-    }
-  }
-  
+
   async function submitPreferences() {
     triedSubmit.value = true
 
