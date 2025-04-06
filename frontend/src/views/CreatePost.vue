@@ -3,64 +3,27 @@
     <v-card class="mx-auto" max-width="800">
       <v-card-title class="text-h5 mb-4">Create New Post</v-card-title>
       <v-card-text>
-        <v-form @submit.prevent="handleSubmit" enctype="multipart/form-data">
-          <v-text-field
-            v-model="title"
-            label="Title"
-            :rules="[v => !!v || 'Title is required']"
-            required
-            class="mb-4"
-          ></v-text-field>
+        <v-form ref="postForm" @submit.prevent="handleSubmit" enctype="multipart/form-data">
+          <v-text-field v-model="title" label="Title" :rules="[v => !!v || 'Title is required']" required
+            class="mb-4"></v-text-field>
 
-          <v-textarea
-            v-model="content"
-            label="Content"
-            :rules="[v => !!v || 'Content is required']"
-            required
-            rows="6"
-            class="mb-4"
-          ></v-textarea>
+          <v-textarea v-model="content" label="Content" :rules="[v => !!v || 'Content is required']" required rows="6"
+            class="mb-4"></v-textarea>
 
-          <v-file-input
-            v-model="image"
-            label="Upload Image"
-            accept="image/*"
-            prepend-icon="mdi-camera"
-            class="mb-4"
-          ></v-file-input>
+          <v-file-input v-model="image" label="Upload Image" accept="image/*" prepend-icon="mdi-camera"
+            class="mb-4"></v-file-input>
 
-          <v-img
-            v-if="imagePreview"
-            :src="imagePreview"
-            max-height="200"
-            contain
-            class="mb-4"
-          ></v-img>
+          <v-img v-if="imagePreview" :src="imagePreview" max-height="200" contain class="mb-4"></v-img>
 
-          <v-btn
-            color="primary"
-            type="submit"
-            :loading="loading"
-            :disabled="loading"
-            block
-            class="mb-2"
-          >
+          <v-btn color="primary" type="submit" :loading="loading" :disabled="loading" block class="mb-2">
             {{ loading ? 'Creating Post...' : 'Create Post' }}
           </v-btn>
 
-          <v-alert
-            v-if="error"
-            type="error"
-            class="mt-4"
-          >
+          <v-alert v-if="error" type="error" class="mt-4">
             {{ error }}
           </v-alert>
 
-          <v-alert
-            v-if="success"
-            type="success"
-            class="mt-4"
-          >
+          <v-alert v-if="success" type="success" class="mt-4">
             Post created successfully!
           </v-alert>
         </v-form>
@@ -127,24 +90,28 @@ export default {
           body: formData
         });
 
+        const result = await response.json();
+
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to create post');
+          throw new Error(result.error || 'Failed to create post');
         }
 
-        await response.json();
         this.success = true;
-        
+
         // Clear form
         this.title = '';
         this.content = '';
         this.image = null;
         this.imagePreview = null;
-        
+
+        this.$nextTick(() => {
+          this.$refs.postForm.resetValidation(); // ✅ timing is now perfect
+        });
+
         // Redirect to home page after a short delay
         setTimeout(() => {
           this.$router.push('/');
-        }, 1500);
+        }, 500);
 
       } catch (err) {
         this.error = err.message;
@@ -166,4 +133,4 @@ export default {
   max-width: 800px;
   margin: 0 auto;
 }
-</style> 
+</style>
