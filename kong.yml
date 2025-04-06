@@ -99,7 +99,7 @@ services:
 
   # User Service
   - name: user-service
-    url: http://user-service:5001
+    url: http://user-service:5002
     routes:
       - name: user-routes
         paths:
@@ -122,6 +122,52 @@ services:
         paths:
           - /api/internal/user
           - /api/internal/user/create  # Added specific path for user creation
+        strip_path: false
+        methods:
+          - POST
+          - OPTIONS
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "http://localhost:8080"
+            - "http://localhost:8000"
+            - "http://localhost"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - apikey
+            - Authorization
+          exposed_headers:
+            - Content-Length
+            - Content-Range
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
+
+  - name: social-service
+    url: http://social-service:5003
+    routes:
+      - name: social-like
+        paths:
+          - /api/social/like
+        strip_path: false
+        methods:
+          - POST
+          - OPTIONS
+      - name: social-comment
+        paths:
+          - /api/social/comment
         strip_path: false
         methods:
           - POST
