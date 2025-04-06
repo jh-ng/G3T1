@@ -61,7 +61,7 @@ def token_required(f):
 # This endpoint is called by the auth service through Kong
 @app.route('/api/internal/user/create', methods=['POST'])
 def create_user():
-    data = request.json
+    data = request.get_json()
     required_fields = ["user_id", "email", "username"]
     for field in required_fields:
         if field not in data:
