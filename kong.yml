@@ -99,7 +99,7 @@ services:
 
   # User Service
   - name: user-service
-    url: http://user-service:5001
+    url: http://user-service:5002
     routes:
       - name: user-routes
         paths:
@@ -204,6 +204,24 @@ services:
         paths:
           - /api/saveItinerary
         strip_path: false
+
+  - name: social-service
+    url: http://social-service:5003
+    routes:
+      - name: social-like
+        paths:
+          - /api/social/like
+        strip_path: false
+        methods:
+          - POST
+          - OPTIONS
+      - name: social-comment
+        paths:
+          - /api/social/comment
+        strip_path: false
+        methods:
+          - POST
+          - OPTIONS
     plugins:
       - name: cors
         config:
