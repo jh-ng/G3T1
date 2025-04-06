@@ -44,36 +44,12 @@ services:
       context: ./backend/post
       dockerfile: Dockerfile
     restart: always
-    # env_file:
-    #   - ./backend/post/.env
-    environment:
-      - JWT_SECRET=esd_jwt_secret_key
-      - JWT_ALGORITHM=HS256
-      - DB_NAME=postdb
-      - DB_USER=postgres
-      - DB_PASSWORD=root
-      - DB_HOST=post-db
-      - DB_PORT=5432
+    env_file:
+      - ./backend/post/.env
     ports:
       - "5000:5000"
     networks:
       - kong-net
-
-  # post-db:
-  #   image: postgres:13
-  #   environment:
-  #     POSTGRES_DB: postdb
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: root
-  #   networks:
-  #     - kong-net
-  #   volumes:
-  #     - post_data:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 5
 
   user-service:
     build: 
