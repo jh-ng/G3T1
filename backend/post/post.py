@@ -184,5 +184,111 @@ def get_user_posts(user_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/posts/<int:post_id>', methods=['PUT'])
+def update_post(post_id):
+    # Verify JWT token
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'No token provided'}), 401
+    
+    token = auth_header.split(' ')[1]
+    payload = verify_token(token)
+    
+    if not payload:
+        return jsonify({'error': 'Invalid or expired token'}), 401
+
+    try:
+        # First, get the post to check ownership
+        post_response = supabase.table(POSTS_TABLE).select('*').eq('id', post_id).execute()
+        
+        if not post_response.data:
+            return jsonify({'error': 'Post not found'}), 404
+        
+        post = post_response.data[0]
+        
+        # Check if the user is the owner of the post
+        if post['user_id'] != payload['user_id']:
+            return jsonify({'error': 'Unauthorized to update this post'}), 403
+        
+        # Get form data
+        title = request.form.get('title')
+        content = request.form.get('content')
+        
+        if not all([title, content]):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Prepare update data
+        update_data = {
+            'title': title,
+            'content': content,
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        # Handle image upload if present
+        if 'image' in request.files:
+            file = request.files['image']
+            if file.filename != '':
+                # Upload to Cloudinary
+                upload_result = cloudinary.uploader.upload(file)
+                update_data['image_url'] = upload_result['secure_url']
+        
+        # Update post in Supabase
+        response = supabase.table(POSTS_TABLE).update(update_data).eq('id', post_id).execute()
+        
+        updated_post = response.data[0]
+        
+        return jsonify({
+            'message': 'Post updated successfully',
+            'post': {
+                'id': updated_post['id'],
+                'title': updated_post['title'],
+                'content': updated_post['content'],
+                'image_url': updated_post['image_url'],
+                'created_at': updated_post['created_at'],
+                'updated_at': updated_post.get('updated_at'),
+                'user_id': updated_post['user_id'],
+                'username': updated_post['username']
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/posts/<int:post_id>', methods=['DELETE'])
+def delete_post(post_id):
+    # Verify JWT token
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'No token provided'}), 401
+    
+    token = auth_header.split(' ')[1]
+    payload = verify_token(token)
+    
+    if not payload:
+        return jsonify({'error': 'Invalid or expired token'}), 401
+
+    try:
+        # First, get the post to check ownership
+        post_response = supabase.table(POSTS_TABLE).select('*').eq('id', post_id).execute()
+        
+        if not post_response.data:
+            return jsonify({'error': 'Post not found'}), 404
+        
+        post = post_response.data[0]
+        
+        # Check if the user is the owner of the post
+        if post['user_id'] != payload['user_id']:
+            return jsonify({'error': 'Unauthorized to delete this post'}), 403
+        
+        # Delete the post from Supabase
+        supabase.table(POSTS_TABLE).delete().eq('id', post_id).execute()
+        
+        return jsonify({
+            'message': 'Post deleted successfully'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

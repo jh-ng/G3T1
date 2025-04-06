@@ -33,7 +33,7 @@ if not supabase_url or not supabase_key:
 supabase: Client = create_client(supabase_url, supabase_key)
 
 # Define the table name for authentication
-AUTHENTICATION_TABLE = "users"
+AUTHENTICATION_TABLE = "authentication"
 
 # Kong API Gateway URL (adjust as needed)
 KONG_URL = os.environ.get("KONG_URL", "http://localhost:8000")

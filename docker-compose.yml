@@ -36,9 +36,6 @@ services:
       - DB_PASSWORD=postgres
     ports:
       - "5001:5001"
-    depends_on:
-      auth-db:
-        condition: service_healthy
     networks:
       - kong-net
 
@@ -52,34 +49,10 @@ services:
     environment:
       - JWT_SECRET=esd_jwt_secret_key
       - JWT_ALGORITHM=HS256
-      - DB_NAME=postdb
-      - DB_USER=postgres
-      - DB_PASSWORD=root
-      - DB_HOST=post-db
-      - DB_PORT=5432
     ports:
       - "5000:5000"
-    depends_on:
-      post-db:
-        condition: service_healthy
     networks:
       - kong-net
-
-  post-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: postdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
-    networks:
-      - kong-net
-    volumes:
-      - post_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   user-service:
     build: 
@@ -100,5 +73,3 @@ networks:
 
 volumes:
   kong_data:
-  post_data:
-  auth_data:
