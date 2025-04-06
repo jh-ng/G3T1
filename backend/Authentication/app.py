@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
+app.config['PROPAGATE_EXCEPTIONS'] = True  # add this
+app.config['DEBUG'] = True  # optional: shows errors during dev
 CORS(app, resources={
     r"/*": {
         "origins": ["http://localhost:8080"],
@@ -73,33 +75,29 @@ def token_required(f):
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     data = request.get_json()
+
+    print("[DEBUG] Received data:", data)
     
     if not all(k in data for k in ['username', 'email', 'password']):
         return jsonify({'error': 'Missing required fields'}), 400
     
     try:
-        # Check if username or email already exists
-        response = supabase.table(AUTHENTICATION_TABLE).select('username, email').or_(
-            f"username.eq.{data['username']},email.eq.{data['email']}"
-        ).execute()
-        
-        if response.data:
-            return jsonify({'error': 'Username or email already exists'}), 400
-        
-        # Hash password
-        password_hash = generate_password_hash(data['password'])
-        
-        # Insert new user in auth database
+
+        password_hash = generate_password_hash(data['password'])  
+
+       # Insert new user in auth database
         response = supabase.table(AUTHENTICATION_TABLE).insert({
             "username": data['username'],
             "email": data['email'],
             "password_hash": password_hash
         }).execute()
-        
-        if not response.data:
+
+        # Check response before accessing it
+        if not response.data or len(response.data) == 0:
             return jsonify({'error': 'Failed to register user'}), 500
-            
+
         user = response.data[0]
+
         
         # Now create a user record in the user service through Kong
         try:
