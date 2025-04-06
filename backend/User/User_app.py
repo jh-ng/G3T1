@@ -20,7 +20,7 @@ supabase_key = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
 # Define the table name for users
-USER_TABLE = "users"
+USER_TABLE = "user"
 
 # Kong API Gateway URL
 KONG_URL = os.environ.get("KONG_URL", "http://localhost:8000")
@@ -206,4 +206,4 @@ def delete_user(user_id):
         return jsonify({"error": f"Error deleting user: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5002, debug=True)
