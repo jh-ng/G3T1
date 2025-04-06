@@ -65,6 +65,18 @@ services:
     networks:
       - kong-net
 
+  social-service:
+    build:
+      context: ./backend/Social
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/Social/.env
+    restart: always
+    ports:
+      - "5003:5003"
+    networks:
+      - kong-net
+
 networks:
   kong-net:
     name: g3t1_kong-net
