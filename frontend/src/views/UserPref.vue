@@ -66,14 +66,14 @@
   
   <script setup>
   import authService from '@/services/auth';
-  import vSelect from "vue-select";
+  // import vSelect from "vue-select";
   import "vue-select/dist/vue-select.css";
   import Multiselect from 'vue-multiselect'
   import 'vue-multiselect/dist/vue-multiselect.min.css'
   import { reactive, ref } from 'vue'
   
   const triedSubmit = ref(false)
-  const token = authService.getToken();
+  // const token = authService.getToken();
   const currentUser = authService.getCurrentUser();
   const user = currentUser.id 
   
@@ -105,15 +105,15 @@
         return;
       }
 
-  const token = localStorage.getItem('token'); // JWT from login
+  const token = localStorage.getItem('token'); 
   const user_pref_payload = {
     uid: user,
-    user_pref: form
+    taste_preferen: form
   };
 
   try {
-    const res = await fetch('http://localhost:5001/submit', {
-      method: 'POST',
+    const res = await fetch(`http://localhost:5002/api/user/${user}`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
