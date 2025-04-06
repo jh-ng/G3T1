@@ -1,20 +1,19 @@
 {
-  "name": "g3t1",
+  "name": "ai-microservice",
   "version": "1.0.0",
-  "description": "start frontend: 1. cd frontend 2. npm run dev",
-  "main": "index.js",
+  "description": "AI microservice for generating travel itineraries",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node app.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google/genai": "^0.6.1",
-    "@google/generative-ai": "^0.24.0",
-    "axios": "^1.8.4",
+    "@google/generative-ai": "^0.1.3",
+    "axios": "^1.6.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2"
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
   }
 }

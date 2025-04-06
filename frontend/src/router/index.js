@@ -40,6 +40,11 @@ const routes = [
     name: 'UserPreference',
     component: () => import('../views/UserPref.vue'),
     meta: {requiresAuth: true}
+  },
+  {
+    path: '/travel-planner',
+    name: 'TravelPlanner',
+    component: () => import('../components/TravelForm.vue')
   }
 ]
 
