@@ -1,4 +1,3 @@
-
 # G3T1 Travel Planner
 
 ## Getting Started
@@ -25,6 +24,29 @@ npm run dev
 ```bash
 docker-compose up -d --build
 ```
+
+## Integrated Application Architecture
+
+The application consists of a Vue.js frontend and multiple microservices backend with a Kong API gateway:
+
+- **Frontend**: Single Vue.js application with travel planning features and AI-powered itinerary generation
+- **Backend Services**:
+  - **AI Microservice**: Generates travel itineraries using AI
+  - **Location Service**: Provides place information and recommendations
+  - **User Service**: Manages user profiles and preferences
+  - **Auth Service**: Handles authentication and authorization
+  - **Post Service**: Manages user posts and shared itineraries
+- **Kong API Gateway**: Routes API requests to appropriate microservices
+
+### Environment Variables
+The frontend uses a `.env` file containing API keys. Current environment variables include:
+- `VUE_APP_GEOAPIFY_API_KEY`: API key for Geoapify location autocomplete service
+
+### Main Application Features
+- Travel itinerary planning with AI assistance
+- Location search with autocomplete
+- User authentication
+- Sharing travel plans
 
 ## Docker Commands Guide
 

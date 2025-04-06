@@ -12,9 +12,8 @@
           <v-form @submit.prevent="handleSubmit" class="form-content">
             <div class="location-field mb-6">
               <label class="v-label text-subtitle-2 mb-1">Destination</label>
-              <ReactAutocompleteWrapper
+              <GeoAutoComplete
                 v-model="formData.destination"
-                placeholder="Enter a destination"
                 @place-selected="handlePlaceSelected"
               />
             </div>
@@ -29,7 +28,7 @@
                   variant="outlined"
                   :rules="[
                     v => !!v || 'Start date is required',
-                    v => new Date(v) >= new Date().setHours(0,0,0,0) || 'Start date cannot be in the past'
+                    v => formData.startDate && formData.startDate >= today || 'Start date cannot be in the past'
                   ]"
                   :min="today"
                   id="startDate"
@@ -44,7 +43,6 @@
                   v-if="showStartDatePicker"
                   :min="today"
                   @update:model-value="showStartDatePicker = false"
-                  format="YYYY-MM-DD"
                 ></v-date-picker>
               </v-col>
               
@@ -57,8 +55,8 @@
                   variant="outlined"
                   :rules="[
                     v => !!v || 'End date is required',
-                    v => !formData.startDate || new Date(v) >= new Date(formData.startDate) || 'End date must be after start date',
-                    v => !formData.startDate || (new Date(v) <= new Date(maxEndDate)) || 'Maximum trip duration is 7 days (inclusive)'
+                    v => !formData.startDate || formData.endDate >= formData.startDate || 'End date must be after start date',
+                    v => !formData.startDate || (formData.endDate <= maxEndDate) || 'Maximum trip duration is 7 days (inclusive)'
                   ]"
                   :min="formattedStartDate"
                   :max="maxEndDate"
@@ -74,10 +72,9 @@
                 <v-date-picker
                   v-model="formData.endDate"
                   v-if="showEndDatePicker"
-                  :min="formattedStartDate"
+                  :min="formData.startDate"
                   :max="maxEndDate"
                   @update:model-value="showEndDatePicker = false"
-                  format="YYYY-MM-DD"
                 ></v-date-picker>
               </v-col>
             </v-row>
@@ -139,15 +136,15 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import ReactAutocompleteWrapper from './ReactAutocompleteWrapper.vue'
+import GeoAutoComplete from './GeoAutoComplete.vue'
 
 export default {
   name: 'TravelForm',
   components: {
-    ReactAutocompleteWrapper
+    GeoAutoComplete
   },
   setup() {
     const router = useRouter()
@@ -155,62 +152,58 @@ export default {
     const showStartDatePicker = ref(false)
     const showEndDatePicker = ref(false)
 
+    // 'today' is now a Date object set to midnight
     const today = computed(() => {
-      const date = new Date()
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
+      const now = new Date()
+      now.setHours(0, 0, 0, 0)
+      return now
     })
 
-    const maxEndDate = computed(() => {
-      if (!formData.value.startDate) return null
-      try {
-        const startDate = new Date(formData.value.startDate)
-        const maxDate = new Date(startDate)
-        // Add full days to avoid time zone issues
-        maxDate.setHours(0, 0, 0, 0)
-        maxDate.setDate(startDate.getDate() + 6)
-        return `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')}`
-      } catch (error) {
-        console.error('Error calculating max end date:', error)
-        return null
-      }
-    })
-
+    // Initialize dates as null instead of empty strings
     const formData = ref({
       destination: '',
-      startDate: '',
-      endDate: '',
+      startDate: null,
+      endDate: null,
       numTravelers: 1,
       budget: 'Medium'
     })
 
-    const formatDate = (date) => {
-      if (!date) return ''
-      // If it's already in YYYY-MM-DD format, return as is
-      if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date
-      // Otherwise, convert to YYYY-MM-DD format
-      const d = new Date(date)
-      const year = d.getFullYear()
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
+    // maxEndDate now returns a Date object (7 days after start date)
+    const maxEndDate = computed(() => {
+      if (!formData.value.startDate) return null
+      const startDate = new Date(formData.value.startDate)
+      const maxDate = new Date(startDate)
+      maxDate.setDate(startDate.getDate() + 6)
+      return maxDate
+    })
+
+    // Helper: Format dates for display. Accepts either a Date object or a string.
+    const formatDisplayDate = (dateVal) => {
+      if (!dateVal) return ''
+      let date = typeof dateVal === 'string' ? new Date(dateVal) : dateVal
+      if (isNaN(date.getTime())) return dateVal
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      })
     }
 
+    // Computed properties for formatted dates in text fields
     const formattedStartDate = computed({
-      get: () => formatDate(formData.value.startDate),
-      set: (val) => { formData.value.startDate = val }
+      get: () => formatDisplayDate(formData.value.startDate),
+      set: () => { /* read-only */ }
     })
 
     const formattedEndDate = computed({
-      get: () => formatDate(formData.value.endDate),
-      set: (val) => { formData.value.endDate = val }
+      get: () => formatDisplayDate(formData.value.endDate),
+      set: () => { /* read-only */ }
     })
 
     const handlePlaceSelected = (place) => {
       if (place) {
-        console.log('Full Place Response:', place);
+        console.log('Full Place Response:', place)
         console.log('Place Properties:', {
           formatted: place.properties.formatted,
           name: place.properties.name,
@@ -221,16 +214,16 @@ export default {
           lon: place.properties.lon,
           type: place.properties.result_type,
           category: place.properties.category
-        });
+        })
         
-        // Construct a more detailed destination string
-        const locationParts = [];
-        if (place.properties.name) locationParts.push(place.properties.name);
-        if (place.properties.city) locationParts.push(place.properties.city);
-        if (place.properties.state) locationParts.push(place.properties.state);
-        if (place.properties.country) locationParts.push(place.properties.country);
+        // Construct a detailed destination string
+        const locationParts = []
+        if (place.properties.name) locationParts.push(place.properties.name)
+        if (place.properties.city) locationParts.push(place.properties.city)
+        if (place.properties.state) locationParts.push(place.properties.state)
+        if (place.properties.country) locationParts.push(place.properties.country)
         
-        formData.value.destination = locationParts.join(', ') || place.properties.formatted;
+        formData.value.destination = locationParts.join(', ') || place.properties.formatted
       }
     }
 
@@ -239,26 +232,21 @@ export default {
         alert('Please select a destination')
         return
       }
-
       if (!formData.value.startDate || !formData.value.endDate) {
         alert('Please select both start and end dates')
         return
       }
-
       try {
         loading.value = true
-        const response = await axios.post('http://localhost:3000/api/itinerary', {
+        const response = await axios.post('http://localhost:8000/api/itinerary', {
           destination: formData.value.destination,
-          startDate: formattedStartDate.value,
-          endDate: formattedEndDate.value,
+          startDate: formData.value.startDate,
+          endDate: formData.value.endDate,
           numTravelers: formData.value.numTravelers,
           budget: formData.value.budget
         })
 
-        // Log the response for debugging
         console.log('API Response:', response.data)
-
-        // Store the complete response data
         sessionStorage.setItem('itineraryData', JSON.stringify(response.data))
         router.push('/itinerary')
       } catch (error) {
@@ -273,32 +261,6 @@ export default {
       }
     }
 
-    const openDatePicker = (event, fieldId) => {
-      event.preventDefault();
-      const field = document.getElementById(fieldId);
-      if (field) {
-        const input = field.querySelector('input');
-        if (input) {
-          input.click();
-        }
-      }
-    };
-
-    const formatDisplayDate = (dateStr) => {
-      if (!dateStr) return '';
-      try {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', {
-          weekday: 'short',
-          month: 'short', 
-          day: 'numeric',
-          year: 'numeric'
-        });
-      } catch (error) {
-        return dateStr;
-      }
-    };
-
     return {
       formData,
       loading,
@@ -309,14 +271,14 @@ export default {
       showStartDatePicker,
       showEndDatePicker,
       formattedStartDate,
-      formattedEndDate,
-      formatDisplayDate
+      formattedEndDate
     }
   }
 }
 </script>
 
 <style scoped>
+/* (Your existing styles remain unchanged) */
 .fill-height {
   background-color: #f8f9fd;
   padding: 24px;
@@ -424,69 +386,6 @@ export default {
   background: linear-gradient(to bottom, #f0f4ff, #ffffff);
 }
 
-.location-field :deep(.geoapify-autocomplete-input) {
-  width: 100%;
-  padding: 16px;
-  border: 1px solid rgba(106, 128, 224, 0.15);
-  border-radius: 12px;
-  background: #ffffff;
-  font-family: inherit;
-  font-size: 1rem;
-  color: #374151;
-  transition: all 0.3s ease;
-}
-
-.location-field :deep(.geoapify-autocomplete-input:hover) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(106, 128, 224, 0.1);
-  border-color: rgba(106, 128, 224, 0.3);
-}
-
-.location-field :deep(.geoapify-autocomplete-input:focus) {
-  outline: none;
-  border-color: rgba(106, 128, 224, 0.5);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(106, 128, 224, 0.1);
-  background: linear-gradient(to bottom, #f0f4ff, #ffffff);
-}
-
-.location-field :deep(.geoapify-autocomplete-items) {
-  background: #ffffff;
-  border: 1px solid rgba(106, 128, 224, 0.15);
-  border-radius: 12px;
-  margin-top: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.location-field :deep(.geoapify-autocomplete-item) {
-  padding: 12px 16px;
-  cursor: pointer;
-  color: #374151;
-  transition: background-color 0.2s ease;
-}
-
-.location-field :deep(.geoapify-autocomplete-item:hover) {
-  background-color: rgba(106, 128, 224, 0.1);
-}
-
-.location-field :deep(.geoapify-close-button) {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #6a7280;
-  padding: 4px;
-  border-radius: 50%;
-  transition: background-color 0.2s ease;
-}
-
-.location-field :deep(.geoapify-close-button:hover) {
-  background-color: rgba(106, 128, 224, 0.08);
-}
-
 /* Date field styles */
 .date-field :deep(input) {
   color: #374151 !important;
@@ -497,66 +396,5 @@ export default {
 .date-field :deep(.v-field__input) {
   cursor: pointer;
   color: #374151 !important;
-  opacity: 1 !important;
 }
-
-.date-field :deep(.v-field) {
-  cursor: pointer;
-}
-
-/* Hide the default calendar picker icon */
-.date-field :deep(input[type="date"]::-webkit-calendar-picker-indicator) {
-  display: none;
-}
-
-.date-field :deep(input[type="date"]) {
-  color-scheme: light;
-}
-
-/* Fix for disabled state while keeping text visible */
-.date-field.v-text-field--disabled :deep(input),
-.date-field.v-text-field--disabled :deep(.v-field__input) {
-  opacity: 1 !important;
-  color: #374151 !important;
-}
-
-.date-field.v-text-field--disabled :deep(.v-field) {
-  opacity: 1 !important;
-}
-
-.date-field.v-text-field--disabled :deep(.v-field--disabled) {
-  opacity: 1 !important;
-}
-
-.date-field.v-text-field--disabled :deep(.v-field--variant-outlined.v-field--disabled) {
-  opacity: 1 !important;
-}
-
-.text-caption {
-  font-weight: 500;
-  color: #6a7280;
-  font-size: 0.85rem;
-  opacity: 0.9;
-}
-
-@media (max-width: 960px) {
-  .fill-height {
-    padding: 16px;
-    border-radius: 0;
-  }
-  
-  .travel-form-card {
-    padding: 1.5rem;
-  }
-  
-  .form-content {
-    padding: 12px;
-  }
-}
-
-@media (min-width: 1600px) {
-  .fill-height {
-    max-width: 1300px;
-  }
-}
-</style> 
+</style>

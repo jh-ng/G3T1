@@ -10,16 +10,13 @@ export function ReactAutocomplete({ onSelect, placeholder = "Enter an address he
   const timeoutRef = useRef(null);
 
   useEffect(() => {
-    let currentPromiseReject = null;
+    const input = inputRef.current;
+    if (!input) return;
 
     const handleInput = async () => {
-      const value = inputRef.current.value;
+      const value = input.value;
       setInputValue(value);
       
-      if (currentPromiseReject) {
-        currentPromiseReject({ canceled: true });
-      }
-
       if (!value) {
         setShowClear(false);
         setItems([]);
@@ -36,21 +33,20 @@ export function ReactAutocomplete({ onSelect, placeholder = "Enter an address he
       // Set a new timeout
       timeoutRef.current = setTimeout(async () => {
         try {
-          const apiKey = import.meta.env.VITE_APP_GEOAPIFY_API_KEY;
+          // Using the environment variable for the API key
+          const apiKey = process.env.VUE_APP_GEOAPIFY_API_KEY || '77233530582744269b34444605bdadab';
           const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(value)}&limit=5&apiKey=${apiKey}`;
           
           const response = await fetch(url);
           if (response.ok) {
             const data = await response.json();
             // Only update if the input value hasn't changed
-            if (value === inputRef.current.value) {
-              setItems(data.features);
+            if (value === input.value) {
+              setItems(data.features || []);
             }
           }
         } catch (err) {
-          if (!err.canceled) {
-            console.error(err);
-          }
+          console.error('Error fetching locations:', err);
         }
       }, 300); // 300ms debounce
     };
@@ -77,7 +73,6 @@ export function ReactAutocomplete({ onSelect, placeholder = "Enter an address he
       }
     };
 
-    const input = inputRef.current;
     input.addEventListener('input', handleInput);
     input.addEventListener('keydown', handleKeyDown);
     document.addEventListener('click', handleClickOutside);
@@ -93,10 +88,12 @@ export function ReactAutocomplete({ onSelect, placeholder = "Enter an address he
   }, [items, focusedIndex]);
 
   const handleSelect = (item) => {
-    if (item) {
+    if (item && inputRef.current) {
       inputRef.current.value = item.properties.formatted;
       setInputValue(item.properties.formatted);
-      onSelect(item);
+      if (typeof onSelect === 'function') {
+        onSelect(item);
+      }
     }
     setItems([]);
     setFocusedIndex(-1);
@@ -104,9 +101,13 @@ export function ReactAutocomplete({ onSelect, placeholder = "Enter an address he
 
   const handleClear = (e) => {
     e.stopPropagation();
-    inputRef.current.value = '';
-    setInputValue('');
-    onSelect(null);
+    if (inputRef.current) {
+      inputRef.current.value = '';
+      setInputValue('');
+      if (typeof onSelect === 'function') {
+        onSelect(null);
+      }
+    }
     setShowClear(false);
     setItems([]);
     setFocusedIndex(-1);
@@ -117,19 +118,25 @@ export function ReactAutocomplete({ onSelect, placeholder = "Enter an address he
       <input
         ref={inputRef}
         type="text"
-        placeholder={placeholder}
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
+        placeholder={placeholder || "Enter an address"}
+        defaultValue={inputValue}
       />
       {showClear && (
-        <div className="clear-button visible" onClick={handleClear}>
-          <svg viewBox="0 0 24 24" height="24">
-            <path
-              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-              fill="currentColor"
-            />
-          </svg>
-        </div>
+        <button 
+          className="clear-button visible" 
+          onClick={handleClear}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            position: 'absolute',
+            right: '10px',
+            top: '50%',
+            transform: 'translateY(-50%)'
+          }}
+        >
+          ✕
+        </button>
       )}
       {items.length > 0 && (
         <div className="autocomplete-items">

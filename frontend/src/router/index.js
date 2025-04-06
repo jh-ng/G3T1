@@ -34,12 +34,23 @@ const routes = [
     component: () => import('../views/UserProfile.vue'),
     meta: { requiresAuth: true }
   },
-
   {
     path: '/user-preference',
     name: 'UserPreference',
     component: () => import('../views/UserPref.vue'),
     meta: {requiresAuth: true}
+  },
+  {
+    path: '/travel-planner',
+    name: 'TravelPlanner',
+    component: () => import('../views/TravelPlanner.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/itinerary',
+    name: 'Itinerary',
+    component: () => import('../views/Itinerary.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 

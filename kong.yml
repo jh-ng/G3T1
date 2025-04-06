@@ -154,3 +154,81 @@ services:
           credentials: true
           max_age: 3600
           preflight_continue: false
+
+  # Location Service
+  - name: location-service
+    url: http://location-service:4500
+    routes:
+      - name: location-routes
+        paths:
+          - /api/places
+        strip_path: false
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "http://localhost:8080"
+            - "http://localhost:8000"
+            - "http://localhost"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - apikey
+            - Authorization
+          exposed_headers:
+            - Content-Length
+            - Content-Range
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
+
+  # AI Microservice
+  - name: ai-microservice
+    url: http://ai-microservice:3000
+    routes:
+      - name: ai-itinerary
+        paths:
+          - /api/itinerary
+        strip_path: false
+      - name: ai-save-itinerary
+        paths:
+          - /api/saveItinerary
+        strip_path: false
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "http://localhost:8080"
+            - "http://localhost:8000"
+            - "http://localhost"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - apikey
+            - Authorization
+          exposed_headers:
+            - Content-Length
+            - Content-Range
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
