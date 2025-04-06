@@ -26,22 +26,37 @@ export default {
     let root = null;
 
     onMounted(() => {
-      root = ReactDOM.createRoot(container.value);
-      
-      root.render(
-        React.createElement(ReactAutocomplete, {
-          onSelect: (data) => {
-            emit('update:modelValue', data ? data.properties.formatted : '');
-            emit('place-selected', data);
-          },
-          placeholder: props.placeholder
-        })
-      );
+      if (container.value) {
+        // Create root with a delay to ensure DOM is ready
+        setTimeout(() => {
+          try {
+            root = ReactDOM.createRoot(container.value);
+            
+            const handleSelect = (data) => {
+              emit('update:modelValue', data ? data.properties.formatted : '');
+              emit('place-selected', data);
+            };
+            
+            root.render(
+              React.createElement(ReactAutocomplete, {
+                onSelect: handleSelect,
+                placeholder: props.placeholder
+              })
+            );
+          } catch (error) {
+            console.error('Error rendering React component:', error);
+          }
+        }, 0);
+      }
     });
 
     onBeforeUnmount(() => {
       if (root) {
-        root.unmount();
+        try {
+          root.unmount();
+        } catch (error) {
+          console.error('Error unmounting React component:', error);
+        }
       }
     });
 

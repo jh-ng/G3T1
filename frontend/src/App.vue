@@ -26,12 +26,13 @@
     >
       <v-list>
         <v-list-item to="/" title="Home"></v-list-item>
-        <v-list-item to="/itinerary" title="Itinerary Planner"></v-list-item>
+        <v-list-item to="/travel-planner" title="Travel Planner"></v-list-item>
+        <v-list-item to="/user-preference" title="User Preferences"></v-list-item>
       </v-list>
       <v-divider></v-divider>
       <v-spacer></v-spacer>
       <div class="pa-4">
-        <v-btn rounded block color="primary">Create Post</v-btn>
+        <v-btn rounded block color="primary" to="/create-post">Create Post</v-btn>
       </div>
     </v-navigation-drawer>
     <v-main>

@@ -65,6 +65,32 @@ services:
     networks:
       - kong-net
 
+  location-service:
+    build:
+      context: ./backend/location
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/location/.env
+    ports:
+      - "4500:4500"
+    networks:
+      - kong-net
+
+  ai-microservice:
+    build:
+      context: ./backend/ai-microservice
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/ai-microservice/.env
+    environment:
+      - PLACES_MICROSERVICE_URL=http://location-service:4500
+    ports:
+      - "3000:3000"
+    networks:
+      - kong-net
+    depends_on:
+      - location-service
+
   social-service:
     build:
       context: ./backend/Social
