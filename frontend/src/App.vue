@@ -26,7 +26,6 @@
     >
       <v-list>
         <v-list-item to="/" title="Home"></v-list-item>
-        <v-list-item to="/travel-planner" title="Travel Planner"></v-list-item>
         <v-list-item to="/itinerary" title="Itinerary Planner"></v-list-item>
       </v-list>
       <v-divider></v-divider>
