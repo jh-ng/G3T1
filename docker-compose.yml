@@ -106,6 +106,15 @@ services:
       - JWT_ALGORITHM=HS256
     networks:
       - kong-net
+  rabbitmq-listener:
+    build:
+      context: ./backend/RabbitMQListener
+      dockerfile: Dockerfile
+    restart: always
+    env_file: ./backend/RabbitMQListener/.env
+    networks:
+      - kong-net
+
 
 networks:
   kong-net:

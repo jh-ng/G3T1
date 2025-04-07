@@ -1,0 +1,6 @@
+node_modules/
+.env
+gen-ai-test/
+_ben_temp/
+flights/
+ai-frontend-old/
