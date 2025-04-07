@@ -49,12 +49,19 @@
             clearable
             class="mb-4"
           />
-          <v-text-field
+          <!-- <v-text-field
             v-model="location"
             label="Location"
             placeholder="e.g., Tokyo, Japan"
             class="mb-4"
-          />
+          /> -->
+          <input v-model="searchQuery" @keydown.enter="searchLocation" placeholder="Search for a place..." />
+          <div class="map-container" ref="myMap"></div>
+          <p v-if="selectedLocation">
+            Selected: {{ selectedLocation.address }} ({{
+              selectedLocation.lat
+            }}, {{ selectedLocation.lon }})
+          </p>
           <v-btn
             color="primary"
             type="submit"
@@ -81,6 +88,7 @@
 
 <script>
 import authService from "../services/auth";
+import maplibre from 'maplibre-gl';
 
 export default {
   name: "CreatePost",
@@ -96,6 +104,11 @@ export default {
       preferences: [],
       selectedPreferences: [],
       location: "",
+      map: null,
+      marker: null,
+      selectedLocation: null,
+      searchQuery: '',
+      myAPIKey: process.env.VUE_APP_GEOAPIFY_API_KEY,
     };
   },
   created() {
@@ -113,6 +126,53 @@ export default {
         this.imagePreview = null;
       }
     },
+  },
+  mounted() {
+    const mapStyle = 'https://maps.geoapify.com/v1/styles/osm-carto/style.json';
+
+    this.map = new maplibre.Map({
+      container: this.$refs.myMap,
+      style: `${mapStyle}?apiKey=${this.myAPIKey}`,
+      center: [0, 20],
+      zoom: 2,
+    });
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          this.map.setCenter([longitude, latitude]);
+          this.map.setZoom(12);
+        },
+        (err) => {
+          console.warn("Geolocation failed:", err.message);
+        }
+      );
+    }
+
+    this.map.on('click', (e) => {
+      const { lng, lat } = e.lngLat;
+
+      (async () => {
+        const res = await fetch(`https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=${this.myAPIKey}`);
+        const data = await res.json();
+
+        const address = data.features[0]?.properties.formatted || "Unknown location";
+
+        if (this.marker) {
+          this.marker.setLngLat([lng, lat]);
+          this.marker.getPopup().setText(address);
+        } else {
+          const popup = new maplibre.Popup().setText(address);
+          this.marker = new maplibre.Marker()
+            .setLngLat([lng, lat])
+            .setPopup(popup)
+            .addTo(this.map);
+        }
+
+        this.selectedLocation = { lat, lon: lng, address };
+      })();
+    });
   },
   methods: {
     async fetchPreferences() {
@@ -154,6 +214,40 @@ export default {
       }
     },
 
+    async searchLocation() {
+      if (!this.searchQuery) return;
+
+      const response = await fetch(
+        `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(this.searchQuery)}&apiKey=${this.myAPIKey}`
+      );
+      const data = await response.json();
+
+      if (data.features.length > 0) {
+        const feature = data.features[0];
+        const { lat, lon } = feature.properties;
+
+        this.map.setCenter([lon, lat]);
+        this.map.setZoom(12);
+
+        // Update marker
+        if (this.marker) {
+          this.marker.setLngLat([lon, lat]);
+          this.marker.setPopup(new maplibre.Popup().setText(feature.properties.formatted)).addTo(this.map);
+        } else {
+          this.marker = new maplibre.Marker()
+            .setLngLat([lon, lat])
+            .setPopup(new maplibre.Popup().setText(feature.properties.formatted))
+            .addTo(this.map);
+        }
+
+        this.selectedLocation = {
+          lat,
+          lon,
+          address: feature.properties.formatted,
+        };
+      }
+    },
+
     async handleSubmit() {
       this.loading = true;
       this.error = null;
@@ -174,7 +268,9 @@ export default {
           "selected_preferences",
           this.selectedPreferences.join(",")
         );
-        formData.append('location', this.location);
+        if (this.selectedLocation?.address) {
+          formData.append('location', this.selectedLocation.address);
+        }
         if (this.image) {
           formData.append("image", this.image);
         }
@@ -224,6 +320,13 @@ export default {
 </script>
 
 <style scoped>
+@import '~maplibre-gl/dist/maplibre-gl.css';
+
+.map-container {
+  height: 400px;
+  width: 100%;
+}
+
 .create-post-container {
   padding: 2rem;
   max-width: 800px;
