@@ -41,32 +41,54 @@
       />
     </div>
 
-    <!-- Start Time -->
+    <!-- Start Time - 24hr format -->
     <div class="form-section">
       <label>What time do you prefer starting your day? (24-hour format)</label>
-      <input type="time" v-model="form.start_time" 
-      :class="{ 'required-warning': triedSubmit && !form.start_time }"
-      />
+      <div class="time-input-wrapper">
+        <select 
+          v-model="startHour"
+          class="time-select hour-select"
+          :class="{ 'required-warning': triedSubmit && !form.start_time }">
+          <option value="" disabled>HH</option>
+          <option v-for="hour in hours" :key="hour" :value="hour">{{ hour.toString().padStart(2, '0') }}</option>
+        </select>
+        <span class="time-separator">:</span>
+        <select 
+          v-model="startMinute"
+          class="time-select minute-select"
+          :class="{ 'required-warning': triedSubmit && !form.start_time }">
+          <option value="" disabled>MM</option>
+          <option v-for="minute in minutes" :key="minute" :value="minute">{{ minute.toString().padStart(2, '0') }}</option>
+        </select>
+      </div>
     </div>
 
-    <!-- End Time -->
+    <!-- End Time - 24hr format -->
     <div class="form-section">
       <label>What time do you prefer your day to end? (24-hour format)</label>
-      <input type="time" v-model="form.end_time" 
-      :class="{ 'required-warning': triedSubmit && !form.end_time }"
-      />
+      <div class="time-input-wrapper">
+        <select 
+          v-model="endHour"
+          class="time-select hour-select"
+          :class="{ 'required-warning': triedSubmit && !form.end_time }">
+          <option value="" disabled>HH</option>
+          <option v-for="hour in hours" :key="hour" :value="hour">{{ hour.toString().padStart(2, '0') }}</option>
+        </select>
+        <span class="time-separator">:</span>
+        <select 
+          v-model="endMinute"
+          class="time-select minute-select"
+          :class="{ 'required-warning': triedSubmit && !form.end_time }">
+          <option value="" disabled>MM</option>
+          <option v-for="minute in minutes" :key="minute" :value="minute">{{ minute.toString().padStart(2, '0') }}</option>
+        </select>
+      </div>
     </div>
 
     <!-- Submit -->
     <div class="form-section">
-      <button @click="submitPreferences" :disabled="loading">
-        {{ loading ? 'Saving preferences...' : 'Submit Preferences' }}
-      </button>
+      <button @click="submitPreferences">Submit Preferences</button>
     </div>
-
-    <!-- Status messages -->
-    <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
-    <div v-if="successMessage" class="success-message">{{ successMessage }}</div>
   </div>
 </template>
 
@@ -75,18 +97,22 @@ import authService from '@/services/auth';
 import "vue-select/dist/vue-select.css";
 import Multiselect from 'vue-multiselect'
 import 'vue-multiselect/dist/vue-multiselect.min.css'
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { reactive, ref, watch } from 'vue'
 
-const router = useRouter()
 const triedSubmit = ref(false)
-const loading = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
+// Removed unused variables
+// const currentUser = authService.getCurrentUser();
+// const user = currentUser.id
 
-// Get current user from auth service
-const currentUser = authService.getCurrentUser();
-const user = currentUser.id 
+// Generate hour and minute options
+const hours = Array.from({ length: 24 }, (_, i) => i)
+const minutes = Array.from({ length: 60 }, (_, i) => i)
+
+// Time selectors
+const startHour = ref('')
+const startMinute = ref('')
+const endHour = ref('')
+const endMinute = ref('')
 
 const form = reactive({
   travel_style: [],
@@ -96,94 +122,53 @@ const form = reactive({
   end_time: ''
 })
 
+// Watch for time changes and update the form
+watch([startHour, startMinute], () => {
+  if (startHour.value !== '' && startMinute.value !== '') {
+    const hour = startHour.value.toString().padStart(2, '0')
+    const minute = startMinute.value.toString().padStart(2, '0')
+    form.start_time = `${hour}:${minute}`
+  } else {
+    form.start_time = ''
+  }
+})
+
+watch([endHour, endMinute], () => {
+  if (endHour.value !== '' && endMinute.value !== '') {
+    const hour = endHour.value.toString().padStart(2, '0')
+    const minute = endMinute.value.toString().padStart(2, '0')
+    form.end_time = `${hour}:${minute}`
+  } else {
+    form.end_time = ''
+  }
+})
+
 const travelStyles = ['Active', 'Cultural', 'Family', 'Shopping', 'Solo']
 const touristSites = ['Nature Sites', 'Cultural Sites', 'Leisure Attractions', 'Sports Activities']
 const dietOptions = ['Halal', 'Vegetarian', 'Kosher', 'None']
 
 async function submitPreferences() {
   triedSubmit.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
 
-  // Validate form
   if (
     !form.travel_style.length ||
     !form.tourist_sites.length ||
     !form.diet.length ||
     !form.start_time ||
-    !form.end_time
+    !form.end_time ||
+    (form.diet.includes('Allergy') && !form.allergy_detail?.length)
   ) {
-    errorMessage.value = 'Please fill in all required fields';
+    alert('Please fill in all required fields');
     return;
   }
 
-  loading.value = true;
-  const token = localStorage.getItem('token'); 
-  
-  // Create user preference payload
-  const user_pref_payload = {
-    userId: user, // Changed from uid to userId to match database column
-    taste_preferences: form // Fixed typo from taste_preferen to taste_preferences
-  };
-
   try {
-    // Step 1: Save preferences to User Microservice through Kong
-    
-    const res = await fetch(`http://localhost:8000/api/user/${user}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(user_pref_payload)
-    });
-    // Handle both JSON and non-JSON responses
-    let result;
-    try {
-      const text = await res.text();
-      if (text) {
-        result = JSON.parse(text);
-      }
-    } catch (e) {
-      console.error('Error parsing response:', e);
-      throw new Error('The server returned an invalid response. Please try again later.');
-    }
-
-    if (!res.ok) {
-      throw new Error(result?.error || 'Failed to save preferences');
-    }
-
-    // Step 2: Update first login status in Auth Microservice through Kong
-    const authRes = await fetch('http://localhost:8000/api/auth/update-first-login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ userId: user }) // Added userId in the request body
-    });
-
-    // Check if auth update was successful
-    if (!authRes.ok) {
-      console.warn('Warning: Failed to update first login status');
-      // Continue anyway since preferences were saved
-    } else {
-      // Optionally log success but we don't need to parse the response
-      console.log('First login status updated successfully');
-    }
-
-    successMessage.value = 'Preferences saved successfully! Redirecting to homepage...';
-    
-    // Redirect to home page after a short delay
-    setTimeout(() => {
-      router.push('/');
-    }, 1500);
-    
+    // Only update first login status
+    await authService.updateFirstLoginStatus();
+    alert('Preferences saved successfully!');
   } catch (err) {
-    console.error('Error during preference submission:', err);
-    errorMessage.value = err.message || 'Network error occurred';
-  } finally {
-    loading.value = false;
+    console.error(err);
+    alert('Network error');
   }
 }
 </script>
@@ -222,8 +207,12 @@ label {
   margin-bottom: 0.5rem;
 }
 
-input[type="time"] {
-  width: 100%;
+.time-input-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.time-select {
   padding: 0.4rem;
   border-radius: 0.3rem;
   border: 1px solid #ccc;
@@ -231,9 +220,15 @@ input[type="time"] {
   color: black;
 }
 
-input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(10);
-  opacity: 10;
+.hour-select, .minute-select {
+  width: 80px;
+  text-align: center;
+}
+
+.time-separator {
+  margin: 0 10px;
+  font-weight: bold;
+  font-size: 18px;
 }
 
 button {
@@ -250,30 +245,7 @@ button:hover {
   background-color: #e43e1b;
 }
 
-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.error-message {
-  color: #d32f2f;
-  text-align: center;
-  margin-top: 1rem;
-  padding: 0.5rem;
-  background-color: #ffebee;
-  border-radius: 0.3rem;
-}
-
-.success-message {
-  color: #388e3c;
-  text-align: center;
-  margin-top: 1rem;
-  padding: 0.5rem;
-  background-color: #e8f5e9;
-  border-radius: 0.3rem;
-}
-
 .required-warning {
-  border: 1px solid #d32f2f !important;
+  border: 1px solid #ff4b2b !important;
 }
 </style>

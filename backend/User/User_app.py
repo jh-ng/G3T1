@@ -59,13 +59,19 @@ def token_required(f):
     return decorated
 
 # This endpoint is called by the auth service through Kong
-@app.route('/api/internal/user/create', methods=['POST'])
+@app.route('/api/user', methods=['POST'])
 def create_user():
     data = request.get_json()
-    required_fields = ["user_id", "email", "username"]
-    for field in required_fields:
-        if field not in data:
-            return jsonify({"error": f"Missing required field: {field}"}), 400
+    
+    # Check for mandatory fields
+    if "userId" not in data:
+        return jsonify({"error": "Missing required field: userId"}), 400
+    if "username" not in data:
+        return jsonify({"error": "Missing required field: username"}), 400
+    
+    # Ensure email field exists, even if empty
+    if "email" not in data:
+        data["email"] = ""  # Set default empty string if missing
 
     try:
         check_result = supabase.table(USER_TABLE).select("*").eq("userId", data["user_id"]).execute()
@@ -74,7 +80,7 @@ def create_user():
             return jsonify({"message": "User already exists", "user": check_result.data[0]}), 200
         
         user_data = {
-            "user_id": data["user_id"],
+            "userId": data["user_id"],
             "email": data["email"],
             "username": data["username"],
             "created_at": datetime.now().isoformat(),
