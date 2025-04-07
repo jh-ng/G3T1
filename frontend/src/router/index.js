@@ -38,7 +38,7 @@ const routes = [
     path: '/user-preference',
     name: 'UserPreference',
     component: () => import('../views/UserPref.vue'),
-    meta: {requiresAuth: true}
+    meta: { requiresAuth: true, allowFirstLogin: true }
   },
   {
     path: '/travel-planner',
@@ -71,15 +71,29 @@ const router = createRouter({
   routes
 })
 
-// Navigation guard
+// Enhanced navigation guard for first login flow
 router.beforeEach(async (to, from, next) => {
   const isAuthenticated = authService.isAuthenticated();
   
   if (to.meta.requiresAuth && !isAuthenticated) {
+    // Not authenticated, redirect to login
     next('/login');
   } else if (to.meta.requiresGuest && isAuthenticated) {
+    // Already authenticated, redirect from guest pages
     next('/');
+  } else if (isAuthenticated) {
+    // Check for first login flow
+    const isFirstLogin = authService.isFirstLogin();
+    
+    if (isFirstLogin && to.path !== '/user-preference' && !to.meta.allowFirstLogin) {
+      // First login users should complete preferences before accessing other pages
+      next('/user-preference');
+    } else {
+      // Normal navigation
+      next();
+    }
   } else {
+    // Default case
     next();
   }
 })

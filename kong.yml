@@ -24,34 +24,13 @@ services:
         methods:
           - DELETE
           - OPTIONS
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - "http://localhost:8080"
-            - "http://localhost:8000"
-            - "http://localhost"
-          methods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
-          headers:
-            - Accept
-            - Accept-Version
-            - Content-Length
-            - Content-MD5
-            - Content-Type
-            - Date
-            - apikey
-            - Authorization
-          exposed_headers:
-            - Content-Length
-            - Content-Range
-          credentials: true
-          max_age: 3600
-          preflight_continue: false
+      - name: auth-update-first-login  # New route for updating first login status
+        paths:
+          - /api/auth/update-first-login
+        strip_path: false
+        methods:
+          - POST
+          - OPTIONS
 
   - name: post-service
     url: http://post-service:5000
@@ -68,34 +47,6 @@ services:
         paths:
           - /api/posts/user/
         strip_path: false
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - "http://localhost:8080"
-            - "http://localhost:8000"
-            - "http://localhost"
-          methods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
-          headers:
-            - Accept
-            - Accept-Version
-            - Content-Length
-            - Content-MD5
-            - Content-Type
-            - Date
-            - apikey
-            - Authorization
-          exposed_headers:
-            - Content-Length
-            - Content-Range
-          credentials: true
-          max_age: 3600
-          preflight_continue: false
 
   # User Service
   - name: user-service
@@ -126,34 +77,6 @@ services:
         methods:
           - POST
           - OPTIONS
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - "http://localhost:8080"
-            - "http://localhost:8000"
-            - "http://localhost"
-          methods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
-          headers:
-            - Accept
-            - Accept-Version
-            - Content-Length
-            - Content-MD5
-            - Content-Type
-            - Date
-            - apikey
-            - Authorization
-          exposed_headers:
-            - Content-Length
-            - Content-Range
-          credentials: true
-          max_age: 3600
-          preflight_continue: false
 
   # Location Service
   - name: location-service
@@ -163,34 +86,6 @@ services:
         paths:
           - /api/places
         strip_path: false
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - "http://localhost:8080"
-            - "http://localhost:8000"
-            - "http://localhost"
-          methods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
-          headers:
-            - Accept
-            - Accept-Version
-            - Content-Length
-            - Content-MD5
-            - Content-Type
-            - Date
-            - apikey
-            - Authorization
-          exposed_headers:
-            - Content-Length
-            - Content-Range
-          credentials: true
-          max_age: 3600
-          preflight_continue: false
 
   # AI Microservice
   - name: ai-microservice
@@ -204,34 +99,6 @@ services:
         paths:
           - /api/saveItinerary
         strip_path: false
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - "http://localhost:8080"
-            - "http://localhost:8000"
-            - "http://localhost"
-          methods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
-          headers:
-            - Accept
-            - Accept-Version
-            - Content-Length
-            - Content-MD5
-            - Content-Type
-            - Date
-            - apikey
-            - Authorization
-          exposed_headers:
-            - Content-Length
-            - Content-Range
-          credentials: true
-          max_age: 3600
-          preflight_continue: false
 
   # Itinerary Microservice
   - name: itinerary-service
@@ -256,34 +123,6 @@ services:
         methods:
           - GET
           - OPTIONS
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - "http://localhost:8080"
-            - "http://localhost:8000"
-            - "http://localhost"
-          methods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
-          headers:
-            - Accept
-            - Accept-Version
-            - Content-Length
-            - Content-MD5
-            - Content-Type
-            - Date
-            - apikey
-            - Authorization
-          exposed_headers:
-            - Content-Length
-            - Content-Range
-          credentials: true
-          max_age: 3600
-          preflight_continue: false
 
   - name: social-service
     url: http://social-service:5003
@@ -302,31 +141,32 @@ services:
         methods:
           - POST
           - OPTIONS
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - "http://localhost:8080"
-            - "http://localhost:8000"
-            - "http://localhost"
-          methods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
-          headers:
-            - Accept
-            - Accept-Version
-            - Content-Length
-            - Content-MD5
-            - Content-Type
-            - Date
-            - apikey
-            - Authorization
-          exposed_headers:
-            - Content-Length
-            - Content-Range
-          credentials: true
-          max_age: 3600
-          preflight_continue: false
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - "http://localhost:8080"
+        - "http://localhost:8000"
+        - "http://localhost"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - apikey
+        - Authorization
+      exposed_headers:
+        - Content-Length
+        - Content-Range
+      credentials: true
+      max_age: 3600
+      preflight_continue: false

@@ -78,6 +78,30 @@ class AuthService {
     }
   }
 
+  // Add method to check if it's the user's first login
+  isFirstLogin() {
+    const user = this.getCurrentUser();
+    return user ? user.is_first_login : false;
+  }
+
+  // Get information from the JWT token
+  getTokenInfo() {
+    const token = this.getToken();
+    if (!token) return null;
+    
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      return JSON.parse(jsonPayload);
+    } catch (err) {
+      return null;
+    }
+  }
+
   // Add method to verify token validity
   async verifyToken() {
     try {
@@ -88,6 +112,27 @@ class AuthService {
       return false;
     }
   }
+
+  // Add method to update first login status
+  async updateFirstLoginStatus() {
+    try {
+      const response = await axios.post(`${API_URL}/update-first-login`);
+      
+      if (response.data) {
+        // Update the user in localStorage
+        const user = this.getCurrentUser();
+        if (user) {
+          user.is_first_login = false;
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error updating first login status:', error);
+      return false;
+    }
+  }
 }
 
-export default new AuthService(); 
+export default new AuthService();
