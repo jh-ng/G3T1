@@ -134,7 +134,7 @@ def comment_post():
     reply_to_username = None 
     reply_to_user_id=None
     if parent_comment_id:
-        parent_resp = supabase.table("comments").select("user_id").eq("id", parent_comment_id).single().execute()
+        parent_resp = supabase.table("comments").select("user_id","username").eq("id", parent_comment_id).single().execute()
         if parent_resp.data:
             #get the target person to reply to through parent comment data saved
             reply_to_user_id = parent_resp.data["user_id"]
