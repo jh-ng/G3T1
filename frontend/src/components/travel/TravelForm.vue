@@ -236,12 +236,20 @@ export default {
         alert('Please select both start and end dates')
         return
       }
+      
+      // Format dates as YYYY-MM-DD strings to avoid timezone issues
+      const formatDateForAPI = (date) => {
+        if (!date) return '';
+        const d = new Date(date);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      };
+      
       try {
         loading.value = true
         const response = await axios.post('http://localhost:8000/api/itinerary', {
           destination: formData.value.destination,
-          startDate: formData.value.startDate,
-          endDate: formData.value.endDate,
+          startDate: formatDateForAPI(formData.value.startDate),
+          endDate: formatDateForAPI(formData.value.endDate),
           numTravelers: formData.value.numTravelers,
           budget: formData.value.budget
         })

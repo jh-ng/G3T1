@@ -4,7 +4,10 @@
       <v-col cols="12">
         <!-- Travel Details Card -->
         <v-card class="mb-6 travel-details-card">
-          <v-card-title class="text-h5 text-center">{{ travelDetails.destination || 'Travel Details' }}</v-card-title>
+          <v-card-title class="text-h5 text-center destination-title">
+            <v-icon color="white" size="32" class="destination-icon mr-2">mdi-map-marker</v-icon>
+            {{ travelDetails.destination || 'Travel Details' }}
+          </v-card-title>
           <v-card-text>
             <div class="travel-details-container">
               <div class="travel-detail-item">
@@ -41,19 +44,22 @@
 
         <!-- Day Selection and Itinerary integrated in a single card -->
         <v-card class="itinerary-container mb-6">
-          <div class="date-tabs-wrapper">
-            <div class="date-tabs">
-              <button 
-                v-for="date in Object.keys(dailyItineraries)" 
-                :key="date"
-                class="date-tab" 
-                :class="{ active: selectedDate === date }"
-                @click="selectedDate = date"
-              >
-                <span class="day">{{ getTabDisplay(date).weekday }}</span>
-                <span class="date">{{ getTabDisplay(date).date }}</span>
-              </button>
-            </div>
+          <div class="day-tabs">
+            <v-btn
+              v-for="date in fixedDates"
+              :key="date"
+              :class="{ 'active-day': selectedDate === date }"
+              @click="selectedDate = date"
+              class="day-tab"
+              rounded="lg"
+              :elevation="selectedDate === date ? 3 : 1"
+              variant="flat"
+            >
+              <div class="tab-content">
+                <div class="day-name">{{ getWeekdayName(date) }}</div>
+                <div class="day-date">Apr {{ new Date(date + 'T12:00:00Z').getUTCDate() }}</div>
+              </div>
+            </v-btn>
           </div>
           
           <div class="itinerary-content">
@@ -62,7 +68,7 @@
                 <v-timeline density="comfortable">
                   <template v-for="activity in dailyItineraries[selectedDate]" :key="activity.time">
                     <v-timeline-item
-                      dot-color="primary"
+                      :dot-color="getTimeOfDayColor(activity.time)"
                       size="small"
                     >
                       <template v-slot:opposite>
@@ -110,7 +116,7 @@
 </template>
 
 <script>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 
 export default {
   name: 'ItineraryDisplay',
@@ -201,14 +207,122 @@ export default {
              date1.getUTCDate() === date2.getUTCDate();
     };
 
-    // Fix: Manually set the dates to April 7 and 8, 2025
+    // Generate all dates in the selected range dynamically without hard-coding
     const fixedDates = computed(() => {
-      // Hard-coded dates based on travel form selection (Apr 7-8, 2025)
-      return [
-        '2025-04-07',
-        '2025-04-08'
-      ];
+      if (!travelDetails.value) {
+        console.log("Travel details not available, using default date range");
+        return ["2025-04-07", "2025-04-08", "2025-04-09", "2025-04-10", "2025-04-11", "2025-04-12", "2025-04-13"];
+      }
+
+      try {
+        console.log("Generating date range from travel details:", JSON.stringify(travelDetails.value));
+        
+        // Parse start date
+        const startDateStr = travelDetails.value.start_date;
+        const startDate = parseCorrectDate(startDateStr);
+        
+        // Parse end date
+        const endDateStr = travelDetails.value.end_date;
+        const endDate = parseCorrectDate(endDateStr);
+        
+        if (!startDate || !endDate) {
+          console.error("Failed to parse dates:", startDateStr, endDateStr);
+          return ["2025-04-07", "2025-04-08", "2025-04-09", "2025-04-10", "2025-04-11", "2025-04-12", "2025-04-13"];
+        }
+        
+        // Ensure endDate is after or equal to startDate
+        if (endDate < startDate) {
+          console.error("End date is before start date");
+          return ["2025-04-07", "2025-04-08", "2025-04-09", "2025-04-10", "2025-04-11", "2025-04-12", "2025-04-13"];
+        }
+        
+        // Generate all dates in the range (inclusive of end date)
+        const dateRange = [];
+        const currentDate = new Date(startDate);
+        
+        // Create a copy of endDate and add one day to ensure we include the end date completely
+        const adjustedEndDate = new Date(endDate);
+        adjustedEndDate.setUTCDate(adjustedEndDate.getUTCDate() + 1);
+        
+        console.log(`Date range: ${startDate.toISOString()} to ${endDate.toISOString()} (adjusted: ${adjustedEndDate.toISOString()})`);
+        
+        // Use < with adjusted end date to include end date properly
+        while (currentDate < adjustedEndDate) {
+          // Format as ISO date string (YYYY-MM-DD) to ensure consistency
+          dateRange.push(currentDate.toISOString().split('T')[0]);
+          
+          // Increment by one day
+          currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+        }
+        
+        console.log("Generated date range:", dateRange);
+        
+        // Double-check that end date is included
+        const expectedLastDate = endDate.toISOString().split('T')[0];
+        if (!dateRange.includes(expectedLastDate)) {
+          console.warn(`End date ${expectedLastDate} not included in range, adding it manually`);
+          dateRange.push(expectedLastDate);
+        }
+        
+        return dateRange;
+      } catch (error) {
+        console.error("Error generating date range:", error);
+        return ["2025-04-07", "2025-04-08", "2025-04-09", "2025-04-10", "2025-04-11", "2025-04-12", "2025-04-13"];
+      }
     });
+    
+    // Helper function to properly parse dates with timezone correction
+    const parseCorrectDate = (dateStr) => {
+      try {
+        if (!dateStr) return null;
+        
+        // Try to match YYYY-MM-DD or YYYY/MM/DD format
+        const match = typeof dateStr === 'string' ? 
+          dateStr.match(/^(\d{4})[/-](\d{2})[/-](\d{2})$/) : null;
+          
+        if (match) {
+          // Create date with explicit UTC values to avoid timezone issues
+          const year = parseInt(match[1]);
+          const month = parseInt(match[2]) - 1; // JS months are 0-indexed
+          const day = parseInt(match[3]);
+          return new Date(Date.UTC(year, month, day, 12, 0, 0));
+        }
+        
+        // Try to handle "DD MMM YYYY" format (e.g., "7 Apr 2025")
+        if (typeof dateStr === 'string' && dateStr.includes('Apr') && dateStr.includes('202')) {
+          const parts = dateStr.split(' ');
+          if (parts.length === 3) {
+            const day = parseInt(parts[0]);
+            const monthMap = {'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5, 
+                              'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11};
+            const month = monthMap[parts[1]];
+            const year = parseInt(parts[2]);
+            
+            if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+              return new Date(Date.UTC(year, month, day, 12, 0, 0));
+            }
+          }
+        }
+        
+        // Try other formats with explicit UTC creation
+        const dateObj = new Date(dateStr);
+        if (!isNaN(dateObj)) {
+          // Convert to UTC noon time to ensure consistent date
+          return new Date(Date.UTC(
+            dateObj.getFullYear(),
+            dateObj.getMonth(),
+            dateObj.getDate(),
+            12, 0, 0
+          ));
+        }
+        
+        console.warn('Could not parse date:', dateStr);
+        return null;
+      } catch (e) {
+        console.error('Error in parseCorrectDate:', e);
+        return null;
+      }
+    };
     
     const dailyItineraries = computed(() => {
       console.log('Computing dailyItineraries...');
@@ -357,16 +471,32 @@ export default {
       return result;
     });
 
-    // Set the selected date in onMounted
-    onMounted(() => {
-      if (!selectedDate.value) {
-        const dateKeys = Object.keys(dailyItineraries.value);
-        if (dateKeys.length > 0) {
-          // Default to first fixed date (Apr 7, 2025)
-          selectedDate.value = dateKeys[0];
-          console.log('Setting selected date to:', selectedDate.value);
-        }
+    // When fixedDates changes, set the first date as the selected date
+    watch(fixedDates, (newDates) => {
+      if (newDates && newDates.length > 0) {
+        selectedDate.value = newDates[0];
+        console.log('Auto-selected first date from watcher:', selectedDate.value);
       }
+    }, { immediate: true });
+    
+    // When component mounts, scroll to top and select first date
+    onMounted(() => {
+      // Scroll to top of page
+      window.scrollTo(0, 0);
+      
+      // Force select first date if dates are available
+      if (fixedDates.value && fixedDates.value.length > 0) {
+        selectedDate.value = fixedDates.value[0];
+        console.log('Set first date on mount:', selectedDate.value);
+      }
+      
+      // Add a small delay to ensure date selection happens after rendering
+      setTimeout(() => {
+        if (fixedDates.value && fixedDates.value.length > 0) {
+          selectedDate.value = fixedDates.value[0];
+          console.log('Set first date after timeout:', selectedDate.value);
+        }
+      }, 100);
     });
     
     const formatDate = (dateStr) => {
@@ -515,12 +645,158 @@ export default {
     }
     
     const getDuration = (activity) => {
-      return activity.duration || activity.estimated_duration || '';
+      const duration = activity.duration || activity.estimated_duration || '';
+      // Return as is if it already has proper formatting with units
+      if (typeof duration === 'string' && 
+          (duration.includes('minute') || duration.includes('hour') || 
+           duration.includes('min') || duration.includes('hr'))) {
+        return duration;
+      }
+      
+      // For "0:30" format, convert to "30 minutes"
+      if (typeof duration === 'string' && duration.includes(':')) {
+        const parts = duration.split(':');
+        if (parts.length === 2) {
+          const hours = parseInt(parts[0]);
+          const minutes = parseInt(parts[1]);
+          
+          if (hours > 0 && minutes > 0) {
+            return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} minute${minutes > 1 ? 's' : ''}`;
+          } else if (hours > 0) {
+            return `${hours} hour${hours > 1 ? 's' : ''}`;
+          } else if (minutes > 0) {
+            return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+          } else {
+            return '0 minutes';
+          }
+        }
+      }
+      
+      // If it's just a number, add "minutes"
+      if (duration && !isNaN(duration) && duration.toString().trim() !== '') {
+        return `${duration} minute${duration !== '1' ? 's' : ''}`;
+      }
+      
+      // Handle special case for "0" to ensure it displays as "0 minutes"
+      if (duration === '0' || duration === 0) {
+        return '0 minutes';
+      }
+      
+      return duration || '0 minutes';
     }
     
     const getTravelTime = (activity) => {
-      return activity.travelTime || activity.travel_time || activity.travel_time_between_locations || '';
+      const travelTime = activity.travelTime || activity.travel_time || activity.travel_time_between_locations || '';
+      // Return as is if it already has proper formatting with units
+      if (typeof travelTime === 'string' && 
+          (travelTime.includes('minute') || travelTime.includes('hour') || 
+           travelTime.includes('min') || travelTime.includes('hr'))) {
+        return travelTime;
+      }
+      
+      // For "0:30" format, convert to "30 minutes"
+      if (typeof travelTime === 'string' && travelTime.includes(':')) {
+        const parts = travelTime.split(':');
+        if (parts.length === 2) {
+          const hours = parseInt(parts[0]);
+          const minutes = parseInt(parts[1]);
+          
+          if (hours > 0 && minutes > 0) {
+            return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} minute${minutes > 1 ? 's' : ''}`;
+          } else if (hours > 0) {
+            return `${hours} hour${hours > 1 ? 's' : ''}`;
+          } else if (minutes > 0) {
+            return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+          } else {
+            return '0 minutes';
+          }
+        }
+      }
+      
+      // If it's just a number, add "minutes"
+      if (travelTime && !isNaN(travelTime) && travelTime.toString().trim() !== '') {
+        return `${travelTime} minute${travelTime !== '1' ? 's' : ''}`;
+      }
+      
+      // Handle special case for "0" to ensure it displays as "0 minutes"
+      if (travelTime === '0' || travelTime === 0) {
+        return '0 minutes';
+      }
+      
+      return travelTime || '0 minutes';
     }
+
+    // Helper function to get weekday name for a date
+    const getWeekdayName = (dateString) => {
+      const date = new Date(dateString + 'T12:00:00Z'); // Ensure noon UTC for consistency
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return days[date.getUTCDay()];
+    };
+    
+    // Helper function to format date display for tabs (e.g., 'Apr 7')
+    const formatDateForTab = (dateString) => {
+      const date = new Date(dateString + 'T12:00:00Z'); // Ensure noon UTC for consistency
+      // Only show date number for cleaner look
+      return `Apr ${date.getUTCDate()}`;
+    };
+
+    // Helper function to determine color based on time of day
+    const getTimeOfDayColor = (timeStr) => {
+      if (!timeStr) return 'primary';
+      
+      // Extract hours from time string (assuming format like "08:30" or "8:30")
+      const hour = parseInt(timeStr.split(':')[0]);
+      
+      // Early morning (5:00 - 8:59)
+      if (hour >= 5 && hour < 9) {
+        return 'blue-lighten-2'; // Light blue for morning
+      }
+      // Morning to noon (9:00 - 11:59)
+      else if (hour >= 9 && hour < 12) {
+        return 'amber-lighten-1'; // Amber for late morning
+      }
+      // Afternoon (12:00 - 16:59)
+      else if (hour >= 12 && hour < 17) {
+        return 'orange-darken-1'; // Orange for afternoon
+      }
+      // Evening (17:00 - 20:59)
+      else if (hour >= 17 && hour < 21) {
+        return 'deep-purple-lighten-1'; // Purple for evening
+      }
+      // Night (21:00 - 4:59)
+      else {
+        return 'indigo-darken-3'; // Dark blue for night
+      }
+    };
+
+    // Helper function to get actual color values based on time of day
+    const getTimeOfDayColorValue = (timeStr) => {
+      if (!timeStr) return '#6a80e0'; // Default primary color
+      
+      // Extract hours from time string (assuming format like "08:30" or "8:30")
+      const hour = parseInt(timeStr.split(':')[0]);
+      
+      // Early morning (5:00 - 8:59)
+      if (hour >= 5 && hour < 9) {
+        return '#64B5F6'; // Light blue for morning
+      }
+      // Morning to noon (9:00 - 11:59)
+      else if (hour >= 9 && hour < 12) {
+        return '#FFD54F'; // Amber for late morning
+      }
+      // Afternoon (12:00 - 16:59)
+      else if (hour >= 12 && hour < 17) {
+        return '#FB8C00'; // Orange for afternoon
+      }
+      // Evening (17:00 - 20:59)
+      else if (hour >= 17 && hour < 21) {
+        return '#9575CD'; // Purple for evening
+      }
+      // Night (21:00 - 4:59)
+      else {
+        return '#303F9F'; // Dark blue for night
+      }
+    };
 
     return {
       selectedDate,
@@ -531,24 +807,65 @@ export default {
       getTimelineColor,
       getDuration,
       getTravelTime,
-      getTabDisplay
+      getTabDisplay,
+      getWeekdayName,
+      formatDateForTab,
+      fixedDates,
+      getTimeOfDayColor,
+      getTimeOfDayColorValue
     }
   }
 }
 </script>
 
+<style>
+/* Global styles to remove dot borders */
+.v-timeline-divider__dot {
+  border: none !important;
+}
+
+.v-timeline-divider__inner-dot {
+  border: none !important;
+}
+</style>
+
 <style scoped>
+.destination-title {
+  background: linear-gradient(135deg, #6a80e0, #9575CD);
+  color: white !important;
+  padding: 1.5rem 1rem !important;
+  font-weight: 500 !important;
+  font-size: 1.5rem !important;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  border-radius: 0 0 16px 16px;
+  margin-bottom: 0 !important;
+  position: relative;
+}
+
+.destination-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6a80e0, #9575CD);
+  opacity: 0.7;
+}
+
 .travel-details-card {
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
 }
 
 .travel-details-container {
   display: flex;
   flex-wrap: wrap;
-  margin: 0 -12px;
-  justify-content: space-around;
+  margin: 0 -8px;
+  justify-content: center;
 }
 
 .travel-detail-item {
@@ -558,12 +875,20 @@ export default {
   align-items: center;
   padding: 16px;
   margin: 8px;
-  border-radius: 8px;
-  background-color: rgb(248, 249, 253);
+  border-radius: 12px;
+  background-color: rgba(248, 249, 253, 0.8);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.travel-detail-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
 }
 
 .detail-icon {
   margin-right: 16px;
+  opacity: 0.9;
 }
 
 .detail-content {
@@ -573,110 +898,125 @@ export default {
 
 .itinerary-container {
   background-color: #ffffff;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.03);
 }
 
-.date-tabs-wrapper {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+.day-tabs {
+  display: flex;
   overflow-x: auto;
-  padding: 0 16px;
-  background: rgb(248, 249, 253);
-  display: flex;
+  padding: 16px;
+  background: #ffffff;
+  border-bottom: 1px solid rgba(106, 128, 224, 0.15);
   justify-content: center;
+  gap: 16px;
+  scroll-behavior: smooth;
+  border-radius: 16px 16px 0 0;
+  position: relative;
+  z-index: 1;
 }
 
-.date-tabs {
-  display: flex;
-  padding: 12px 0;
-  margin: 0;
-  justify-content: center;
-  max-width: 100%;
-  flex-wrap: wrap;
+.day-tabs::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(106, 128, 224, 0.2), transparent);
+  opacity: 0.8;
 }
 
-.date-tab {
+.day-tab {
+  min-width: 85px !important;
+  padding: 10px !important;
+  height: auto !important;
+  border-radius: 12px !important;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #f8f9fd !important;
+  color: #333;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03) !important;
+}
+
+.day-tab.active-day {
+  background: linear-gradient(135deg, #6a80e0, #9575CD) !important;
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 4px 8px rgba(106, 128, 224, 0.25) !important;
+  transform: translateY(-2px);
+}
+
+.day-tab:hover:not(.active-day) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08) !important;
+  background: linear-gradient(135deg, #f8f9fd, #eef1fa) !important;
+  border-color: rgba(106, 128, 224, 0.2);
+}
+
+.tab-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-width: 90px;
-  height: 64px;
-  padding: 8px 16px;
-  margin: 4px 8px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background-color: #f8f9fd;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  color: rgba(0, 0, 0, 0.6);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  width: 100%;
 }
 
-.date-tab.active {
-  background-color: #6a80e0;
-  border-color: #6a80e0;
-  color: white;
+.day-name {
+  font-size: 1rem;
   font-weight: 600;
-  box-shadow: 0 4px 8px rgba(106, 128, 224, 0.3);
-  transform: translateY(-2px);
-}
-
-.date-tab:hover:not(.active) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  border-color: #6a80e0;
-  background-color: #edf1fd;
-}
-
-.date-tab .day {
-  font-size: 0.95rem;
   margin-bottom: 4px;
-  font-weight: 600;
+  text-transform: capitalize;
 }
 
-.date-tab .date {
+.day-date {
   font-size: 0.85rem;
+  opacity: 0.9;
 }
 
 .itinerary-content {
-  padding: 20px;
+  padding: 24px;
+  background-color: #ffffff;
+  border-radius: 0 0 16px 16px;
 }
 
 .timeline-time {
-  font-weight: 500;
-  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6a80e0;
+  opacity: 0.9;
 }
 
 .timeline-activity {
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-  margin-bottom: 16px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
 }
 
 .timeline-activity:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .location-header {
-  background-color: #6a80e0;
-  color: white;
-  padding: 12px 16px;
-  font-weight: 500;
   font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .activity-content {
-  padding: 16px;
-  background-color: white;
+  padding: 4px 0;
 }
 
 .description {
@@ -689,30 +1029,30 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 
 .meta-item {
   display: flex;
   align-items: center;
-  padding: 6px 12px;
-  border-radius: 50px;
-  background-color: #edf1fd;
-  font-size: 0.9rem;
+  background-color: #f8f9fd;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
 }
 
 .meta-icon {
-  margin-right: 8px;
+  margin-right: 4px;
 }
 
 .notes {
-  margin-top: 16px;
-  color: rgba(0, 0, 0, 0.6);
-  font-style: italic;
-  font-size: 0.9rem;
-  background-color: rgba(0, 0, 0, 0.03);
-  padding: 12px 16px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background-color: rgba(236, 240, 253, 0.5);
   border-radius: 8px;
+  font-size: 0.9rem;
+  color: #444;
   border-left: 3px solid #6a80e0;
 }
 
@@ -721,12 +1061,41 @@ export default {
   margin-bottom: 8px;
 }
 
-:deep(.v-timeline-divider__dot) {
-  background-color: #6a80e0 !important;
+/* Override all timeline dot borders */
+:deep(.v-timeline .v-timeline-divider__dot),
+:deep(.v-timeline .v-timeline-divider__inner-dot) {
+  border-color: transparent !important;
+  border-width: 0 !important;
+  border-style: hidden !important;
+  border: 0 !important;
+  -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
+  box-shadow: none !important;
 }
 
-:deep(.v-timeline .v-timeline-item__body) {
-  transform: translateX(12px);
-  margin: 0;
+.custom-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none !important;
+  border: none !important;
+  background-color: inherit !important;
+}
+
+.destination-icon {
+  animation: bounce 2s ease infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 </style> 
