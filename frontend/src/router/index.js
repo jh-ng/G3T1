@@ -51,6 +51,18 @@ const routes = [
     name: 'Itinerary',
     component: () => import('../views/Itinerary.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/saved-itineraries',
+    name: 'SavedItineraries',
+    component: () => import('../views/SavedItineraries.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/saved-itineraries/:id',
+    name: 'SavedItineraryDetail',
+    component: () => import('../views/SavedItineraryDetail.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 

@@ -17,7 +17,7 @@ app.config['PROPAGATE_EXCEPTIONS'] = True  # add this
 app.config['DEBUG'] = True  # optional: shows errors during dev
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:8080"],
+        "origins": ["http://localhost:8080", "http://localhost:8082"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True

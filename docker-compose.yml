@@ -91,6 +91,21 @@ services:
     depends_on:
       - location-service
 
+  itinerary-service:
+    build:
+      context: ./backend/itinerary-microservice
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/itinerary-microservice/.env
+    environment:
+      - JWT_SECRET=esd_jwt_secret_key
+      - JWT_ALGORITHM=HS256
+    ports:
+      - "5400:5400"
+    networks:
+      - kong-net
+    restart: always
+
   social-service:
     build:
       context: ./backend/Social
