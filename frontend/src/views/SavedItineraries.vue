@@ -43,6 +43,9 @@
           :value="itinerary"
           lines="three"
           class="itinerary-item my-2"
+          v-ripple
+          @click="viewItinerary(itinerary.itineraryID)"
+          style="cursor: pointer"
         >
           <template v-slot:prepend>
             <v-avatar color="primary" variant="tonal" size="large">
@@ -72,13 +75,6 @@
           </v-list-item-subtitle>
           
           <template v-slot:append>
-            <v-btn
-              icon="mdi-eye"
-              variant="text"
-              color="primary"
-              :to="{ name: 'SavedItineraryDetail', params: { id: itinerary.itineraryID }}"
-              title="View itinerary"
-            ></v-btn>
             <v-btn
               icon="mdi-delete"
               variant="text"
@@ -120,6 +116,7 @@
 <script>
 import { ref, onMounted } from 'vue'
 import itineraryService from '@/services/itinerary'
+import { useRouter } from 'vue-router'
 
 export default {
   name: 'SavedItineraries',
@@ -131,6 +128,7 @@ export default {
     const showDeleteDialog = ref(false)
     const selectedItinerary = ref(null)
     const deleting = ref(false)
+    const router = useRouter()
     
     const fetchItineraries = async () => {
       try {
@@ -190,6 +188,10 @@ export default {
       }
     }
     
+    const viewItinerary = (itineraryID) => {
+      router.push({ name: 'SavedItineraryDetail', params: { id: itineraryID }});
+    }
+    
     onMounted(() => {
       fetchItineraries()
     })
@@ -204,7 +206,8 @@ export default {
       deleteItinerary,
       showDeleteDialog,
       selectedItinerary,
-      deleting
+      deleting,
+      viewItinerary
     }
   }
 }
@@ -224,6 +227,8 @@ export default {
 }
 
 .itinerary-item:hover {
-  background-color: rgba(0, 0, 0, 0.03);
+  background-color: rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
 }
 </style> 
