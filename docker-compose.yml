@@ -118,6 +118,23 @@ services:
     networks:
       - kong-net
 
+  create-post-service:
+    build: 
+      context: ./backend/create
+      dockerfile: Dockerfile
+    environment:
+      - JWT_SECRET=esd_jwt_secret_key
+      - JWT_ALGORITHM=HS256
+      - PREFERENCES_SERVICE_URL=http://user-service:5002 
+      - POST_SERVICE_URL=http://post-service:5000
+    depends_on:
+      - user-service
+    ports:
+      - "5005:5005"
+    networks:
+      - kong-net
+
+
 networks:
   kong-net:
     name: g3t1_kong-net
