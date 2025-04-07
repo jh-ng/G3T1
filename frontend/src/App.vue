@@ -27,6 +27,9 @@
       <v-list>
         <v-list-item to="/" title="Home"></v-list-item>
         <v-list-item to="/travel-planner" title="Travel Planner"></v-list-item>
+        <v-list-item to="/saved-itineraries" prepend-icon="mdi-book-open-variant">
+          Saved Itineraries
+        </v-list-item>
         <v-list-item to="/user-preference" title="User Preferences"></v-list-item>
       </v-list>
       <v-divider></v-divider>

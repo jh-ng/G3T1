@@ -39,6 +39,45 @@
                 </div>
               </div>
             </div>
+            
+            <!-- Save Itinerary Button -->
+            <div class="text-center mt-4">
+              <v-btn 
+                color="success" 
+                size="large" 
+                prepend-icon="mdi-content-save" 
+                @click="saveItinerary"
+                :loading="saving"
+                :disabled="saving"
+                class="save-button"
+              >
+                Save Itinerary
+              </v-btn>
+              
+              <!-- Success Message -->
+              <v-alert
+                v-if="saveSuccess"
+                type="success"
+                variant="tonal"
+                class="mt-3"
+                closable
+                @click:close="saveSuccess = false"
+              >
+                Itinerary saved successfully! View your saved itineraries <router-link to="/saved-itineraries">here</router-link>.
+              </v-alert>
+              
+              <!-- Error Message -->
+              <v-alert
+                v-if="saveError"
+                type="error"
+                variant="tonal"
+                class="mt-3"
+                closable
+                @click:close="saveError = null"
+              >
+                {{ saveError }}
+              </v-alert>
+            </div>
           </v-card-text>
         </v-card>
 
@@ -117,6 +156,7 @@
 
 <script>
 import { computed, ref, onMounted, watch } from 'vue'
+import itineraryService from '@/services/itinerary'
 
 export default {
   name: 'ItineraryDisplay',
@@ -128,6 +168,9 @@ export default {
   },
   setup(props) {
     const selectedDate = ref(null)
+    const saving = ref(false)
+    const saveSuccess = ref(false)
+    const saveError = ref(null)
 
     console.log('------ ITINERARY DISPLAY DEBUG ------')
     console.log('Raw itineraryData:', props.itineraryData)
@@ -798,21 +841,57 @@ export default {
       }
     };
 
+    const saveItinerary = async () => {
+      try {
+        saving.value = true
+        saveError.value = null
+        saveSuccess.value = false
+        
+        // Get travel details from props or computed value
+        const itineraryObj = props.itineraryData.itinerary || props.itineraryData
+        let travelDetailsObj = props.itineraryData.travelDetails || travelDetails.value
+        
+        // Make sure travelDetails has all the required properties correctly named
+        travelDetailsObj = {
+          destination: travelDetailsObj.destination,
+          startDate: travelDetailsObj.startDate || travelDetailsObj.start_date,
+          endDate: travelDetailsObj.endDate || travelDetailsObj.end_date,
+          numTravelers: travelDetailsObj.numberOfTravelers || travelDetailsObj.number_of_travelers,
+          budget: travelDetailsObj.budget,
+          dailyStartTime: travelDetailsObj.dailyStartTime || travelDetailsObj.daily_start_time,
+          dailyEndTime: travelDetailsObj.dailyEndTime || travelDetailsObj.daily_end_time
+        }
+        
+        await itineraryService.saveItinerary(itineraryObj, travelDetailsObj)
+        saveSuccess.value = true
+      } catch (error) {
+        console.error('Error saving itinerary:', error)
+        saveError.value = error.message || 'Failed to save itinerary'
+      } finally {
+        saving.value = false
+      }
+    }
+
     return {
-      selectedDate,
       travelDetails,
       dailyItineraries,
-      formatDate,
+      selectedDate,
+      parseCorrectDate,
       formatDateWithCorrection,
-      getTimelineColor,
+      formatDate,
+      getWeekdayName,
       getDuration,
       getTravelTime,
-      getTabDisplay,
-      getWeekdayName,
-      formatDateForTab,
       fixedDates,
       getTimeOfDayColor,
-      getTimeOfDayColorValue
+      getTimeOfDayColorValue,
+      saveItinerary,
+      saving,
+      saveSuccess,
+      saveError,
+      getTabDisplay,
+      getTimelineColor,
+      formatDateForTab
     }
   }
 }
@@ -1030,16 +1109,29 @@ export default {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .meta-item {
   display: flex;
   align-items: center;
-  background-color: #f8f9fd;
-  padding: 4px 8px;
+  background-color: #f0f4ff;
+  padding: 6px 10px;
   border-radius: 6px;
   font-size: 0.85rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Duration meta item */
+.meta-item:first-child {
+  background-color: #e3f2fd;
+  border-left: 3px solid #2196F3;
+}
+
+/* Travel time meta item */
+.meta-item:nth-child(2) {
+  background-color: #e8f5e9;
+  border-left: 3px solid #4CAF50;
 }
 
 .meta-icon {
