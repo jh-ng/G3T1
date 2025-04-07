@@ -17,7 +17,7 @@ app.config['PROPAGATE_EXCEPTIONS'] = True  # add this
 app.config['DEBUG'] = True  # optional: shows errors during dev
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:8080", "http://localhost:8082"],
+        "origins": ["http://localhost:8080"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
@@ -82,14 +82,14 @@ def register():
         return jsonify({'error': 'Missing required fields'}), 400
     
     try:
-
         password_hash = generate_password_hash(data['password'])  
 
-       # Insert new user in auth database
+        # Insert new user in auth database with is_first_login flag set to true
         response = supabase.table(AUTHENTICATION_TABLE).insert({
             "username": data['username'],
             "email": data['email'],
-            "password_hash": password_hash
+            "password_hash": password_hash,
+            "is_first_login": True  # Add is_first_login flag
         }).execute()
 
         # Check response before accessing it
@@ -98,7 +98,6 @@ def register():
 
         user = response.data[0]
 
-        
         # Now create a user record in the user service through Kong
         try:
             # Prepare the data to send to user service
@@ -131,7 +130,8 @@ def register():
                 'id': user['id'],
                 'username': user['username'],
                 'email': user['email'],
-                'created_at': user['created_at']
+                'created_at': user['created_at'],
+                'is_first_login': user['is_first_login']
             }
         }), 201
         
@@ -147,8 +147,8 @@ def login():
         return jsonify({'error': 'Missing required fields'}), 400
     
     try:
-        # Get user by username
-        response = supabase.table(AUTHENTICATION_TABLE).select('id, username, password_hash').eq(
+        # Get user by username - now also selecting is_first_login
+        response = supabase.table(AUTHENTICATION_TABLE).select('id, username, password_hash, is_first_login').eq(
             'username', data['username']
         ).execute()
         
@@ -161,11 +161,15 @@ def login():
         if not check_password_hash(user['password_hash'], data['password']):
             return jsonify({'error': 'Invalid credentials'}), 401
         
-        # Generate JWT token
+        # Get is_first_login value, default to True if not present for backward compatibility
+        is_first_login = user.get('is_first_login', True)
+        
+        # Generate JWT token - now including is_first_login
         token = jwt.encode(
             {
                 'user_id': user['id'],
                 'username': user['username'],
+                'is_first_login': is_first_login,  # Include is_first_login in token
                 'exp': datetime.utcnow() + timedelta(days=1)
             },
             os.getenv('JWT_SECRET', 'esd_jwt_secret_key'),
@@ -176,7 +180,8 @@ def login():
             'token': token,
             'user': {
                 'id': user['id'],
-                'username': user['username']
+                'username': user['username'],
+                'is_first_login': is_first_login  # Include in response
             }
         }), 200
         
@@ -231,6 +236,29 @@ def delete_user(user_id):
     except Exception as e:
         print(f"Error deleting user from auth database: {str(e)}")
         return jsonify({"error": f"Error deleting user from auth database: {str(e)}"}), 500
+
+# Add this new endpoint to update is_first_login status
+@app.route('/api/auth/update-first-login', methods=['POST'])
+@token_required
+def update_first_login():
+    try:
+        user_id = request.user.get('user_id')
+        
+        # Update the is_first_login flag to False
+        result = supabase.table(AUTHENTICATION_TABLE).update({
+            "is_first_login": False
+        }).eq("id", user_id).execute()
+        
+        if not result.data or len(result.data) == 0:
+            return jsonify({'error': 'Failed to update user status'}), 500
+            
+        return jsonify({
+            'message': 'First login status updated successfully',
+            'user_id': user_id
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
