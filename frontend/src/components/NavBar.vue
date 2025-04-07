@@ -25,7 +25,7 @@
           </ul>
           <div class="d-flex">
             <router-link to="/login" class="btn btn-outline-primary me-2">Login</router-link>
-            <router-link to="/signup" class="btn btn-primary">Sign Up</router-link>
+            <router-link to="/register" class="btn btn-primary">Sign Up</router-link>
           </div>
         </div>
       </div>

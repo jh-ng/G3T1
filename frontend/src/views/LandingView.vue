@@ -32,7 +32,7 @@
             </div>
             <div class="col-lg-6 position-relative" data-aos="fade-left" data-aos-delay="400">
               <div class="app-preview animate__animated animate__fadeIn animate__delay-1s">
-                <img src="../assets/herobanner.png" alt="JetSetGo App" class="img-fluid rounded shadow">
+                <img src="../assets/banner1.png" alt="JetSetGo App" class="img-fluid rounded shadow">
               </div>
               <div class="app-glow"></div>
             </div>
@@ -151,11 +151,7 @@
             </div>
           </div>
           
-          <div class="text-center mt-5" data-aos="zoom-in">
-            <button class="btn btn-primary btn-lg animate__animated animate__pulse animate__infinite animate__slow">
-              Start Planning Your Trip
-            </button>
-          </div>
+          
         </div>
       </section>
       

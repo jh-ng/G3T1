@@ -14,16 +14,17 @@
       <template v-else>
         <span class="mr-4">Welcome, {{ currentUser?.username }}</span>
         <v-btn @click="handleLogout" variant="text">Logout</v-btn>
+        <!-- Notification Bell Only -->
+        <v-btn icon variant="text" @click="toggleNotificationPanel" class="notification-bell">
+          <v-badge :content="unreadCount" :model-value="unreadCount > 0" color="error">
+            <v-icon>mdi-bell</v-icon>
+          </v-badge>
+        </v-btn>
       </template>
-      <!-- Notification Bell Icon -->
-      <v-btn icon variant="text" @click="toggleNotificationPanel" class="notification-bell">
-        <v-badge :content="unreadCount" :model-value="unreadCount > 0" color="error">
-          <v-icon>mdi-bell</v-icon>
-        </v-badge>
-      </v-btn>
-
-      <v-btn icon="mdi-dots-vertical" variant="text"></v-btn>
     </v-app-bar>
+
+
+    <!-- Navigation Drawer -->
     <v-navigation-drawer v-model="drawer" temporary style="height: 100vh; display: flex; flex-direction: column">
       <v-list>
         <v-list-item to="/" title="Home"></v-list-item>
@@ -35,44 +36,9 @@
         <v-btn rounded block color="primary">Create Post</v-btn>
       </div>
     </v-navigation-drawer>
-    <!-- Notification Drawer -->
-    <v-navigation-drawer v-model="notificationDrawer" temporary location="right" width="320">
-      <v-toolbar color="primary" dark>
-        <v-toolbar-title>Notifications</v-toolbar-title>
-        <v-spacer></v-spacer>
-        <v-btn icon @click="notificationDrawer = false">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
-      </v-toolbar>
 
-      <v-list v-if="notifications.length === 0">
-        <v-list-item>
-          <v-list-item-title class="text-center py-4">
-            You have no notifications
-          </v-list-item-title>
-        </v-list-item>
-      </v-list>
-
-      <v-list v-else>
-        <v-list-item v-for="notification in notifications" :key="notification.id" @click="markAsRead(notification.id)"
-          :class="{ 'unread-notification': !notification.read }">
-          <v-list-item-title>{{ notification.title }}</v-list-item-title>
-          <v-list-item-subtitle>{{ notification.message }}</v-list-item-subtitle>
-          <v-list-item-subtitle class="text-caption text-grey">
-            {{ formatTime(notification.timestamp) }}
-          </v-list-item-subtitle>
-        </v-list-item>
-      </v-list>
-
-      <template v-if="unreadCount > 0">
-        <v-divider></v-divider>
-        <div class="pa-2">
-          <v-btn block variant="text" color="primary" @click="markAllAsRead">
-            Mark all as read
-          </v-btn>
-        </div>
-      </template>
-    </v-navigation-drawer>
+    <!-- Notification Drawer Component -->
+    <NotificationDrawer v-if="isAuthenticated" :show="notificationDrawer" @close="notificationDrawer = false" />
 
     <v-main>
       <router-view></router-view>
@@ -82,14 +48,23 @@
 
 <script>
 import authService from './services/auth';
+import notificationService from '@/services/notificationService';
+import config from '@/services/config';
+import NotificationDrawer from './components/NotificationDrawer.vue';
+
 
 export default {
   name: "App",
+  components: {
+    NotificationDrawer
+  },
   data() {
     return {
       drawer: false,
       isAuthenticated: false,
-      currentUser: null
+      currentUser: null,
+      notificationDrawer: false
+
     }
   },
   created() {
@@ -97,10 +72,23 @@ export default {
     // Add event listener for storage changes
     window.addEventListener('storage', this.checkAuth);
   },
+  mounted() {
+
+    this.startNotificationPolling();
+
+  },
   beforeUnmount() {
     // Remove event listener
     window.removeEventListener('storage', this.checkAuth);
+
+    this.stopNotificationPolling();
   },
+  computed: {
+    unreadCount() {
+      return notificationService.unreadCount.value;
+    },
+  },
+
   methods: {
     async checkAuth() {
       this.isAuthenticated = authService.isAuthenticated();
@@ -114,15 +102,36 @@ export default {
         const isValid = await authService.verifyToken();
         if (!isValid) {
           this.handleLogout();
+
+        } else {
+          // Initialize notification service with current user ID
+          notificationService.initialize(this.currentUser.id);
         }
       } else {
         this.currentUser = null;
       }
+    }, toggleNotificationPanel() {
+      this.notificationDrawer = !this.notificationDrawer;
     },
+    startNotificationPolling() {
+      this.notificationPollingInterval = setInterval(() => {
+        if (this.isAuthenticated && this.currentUser) {
+          notificationService.fetchNotifications();
+        }
+      }, config.notifications.pollingInterval);
+    },
+    stopNotificationPolling() {
+      if (this.notificationPollingInterval) clearInterval(this.notificationPollingInterval);
+    },
+
+
     handleLogout() {
       authService.logout();
       this.isAuthenticated = false;
       this.currentUser = null;
+      this.notifications = [];
+      this.unreadCount = 0;
+      this.notificationDrawer = false;
       this.$router.push('/login');
     }
   }
@@ -137,6 +146,7 @@ export default {
   text-align: center;
   color: #2c3e50;
 }
+
 .unread-notification {
   background-color: #f5f5f5;
   border-left: 4px solid var(--v-primary-base);

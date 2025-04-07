@@ -3,8 +3,14 @@ import HomePage from '../views/Home.vue'
 import MyLogin from '../views/Login.vue'
 import MyRegister from '../views/Register.vue'
 import authService from '../services/auth'
+import LandingView from '@/views/LandingView.vue'
 
 const routes = [
+  {
+    path: '/landing',
+    name: 'Landing',
+    component: LandingView,
+  },
   {
     path: '/',
     name: 'Home',
