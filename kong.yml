@@ -17,34 +17,20 @@ services:
         paths:
           - /api/auth/verify-token
         strip_path: false
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - "http://localhost:8080"
-            - "http://localhost:8000"
-            - "http://localhost"
-          methods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
-          headers:
-            - Accept
-            - Accept-Version
-            - Content-Length
-            - Content-MD5
-            - Content-Type
-            - Date
-            - apikey
-            - Authorization
-          exposed_headers:
-            - Content-Length
-            - Content-Range
-          credentials: true
-          max_age: 3600
-          preflight_continue: false
+      - name: auth-delete-user  # New route for deleting user from auth service
+        paths:
+          - /api/auth/user/
+        strip_path: false
+        methods:
+          - DELETE
+          - OPTIONS
+      - name: auth-update-first-login  # New route for updating first login status
+        paths:
+          - /api/auth/update-first-login
+        strip_path: false
+        methods:
+          - POST
+          - OPTIONS
 
   - name: post-service
     url: http://post-service:5000
@@ -61,31 +47,126 @@ services:
         paths:
           - /api/posts/user/
         strip_path: false
-    plugins:
-      - name: cors
-        config:
-          origins:
-            - "http://localhost:8080"
-            - "http://localhost:8000"
-            - "http://localhost"
-          methods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-            - OPTIONS
-          headers:
-            - Accept
-            - Accept-Version
-            - Content-Length
-            - Content-MD5
-            - Content-Type
-            - Date
-            - apikey
-            - Authorization
-          exposed_headers:
-            - Content-Length
-            - Content-Range
-          credentials: true
-          max_age: 3600
-          preflight_continue: false 
+
+  # User Service
+  - name: user-service
+    url: http://user-service:5002
+    routes:
+      - name: user-routes
+        paths:
+          - /api/user
+        strip_path: false
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+      - name: user-taste-preferences  # New route for taste preferences
+        paths:
+          - /api/user/
+        strip_path: false
+        methods:
+          - GET
+          - OPTIONS
+      - name: internal-user-routes
+        paths:
+          - /api/internal/user
+          - /api/internal/user/create  # Added specific path for user creation
+        strip_path: false
+        methods:
+          - POST
+          - OPTIONS
+
+  # Location Service
+  - name: location-service
+    url: http://location-service:4500
+    routes:
+      - name: location-routes
+        paths:
+          - /api/places
+        strip_path: false
+
+  # AI Microservice
+  - name: ai-microservice
+    url: http://ai-microservice:3000
+    routes:
+      - name: ai-itinerary
+        paths:
+          - /api/itinerary
+        strip_path: false
+      - name: ai-save-itinerary
+        paths:
+          - /api/saveItinerary
+        strip_path: false
+
+  # Itinerary Microservice
+  - name: itinerary-service
+    url: http://itinerary-service:5400
+    routes:
+      - name: itinerary-routes
+        paths:
+          - /api/itineraries
+          - /api/test-db
+          - /direct-test
+        strip_path: false
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+      - name: itinerary-verify-token
+        paths:
+          - /api/verify-token
+        strip_path: false
+        methods:
+          - GET
+          - OPTIONS
+
+  - name: social-service
+    url: http://social-service:5003
+    routes:
+      - name: social-like
+        paths:
+          - /api/social/like
+        strip_path: false
+        methods:
+          - POST
+          - OPTIONS
+      - name: social-comment
+        paths:
+          - /api/social/comment
+        strip_path: false
+        methods:
+          - POST
+          - OPTIONS
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - "http://localhost:8080"
+        - "http://localhost:8000"
+        - "http://localhost"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - apikey
+        - Authorization
+      exposed_headers:
+        - Content-Length
+        - Content-Range
+      credentials: true
+      max_age: 3600
+      preflight_continue: false

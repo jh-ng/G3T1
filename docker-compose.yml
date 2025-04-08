@@ -20,27 +20,13 @@ services:
     networks:
       - kong-net
 
-  auth-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: authdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - auth_data:/var/lib/postgresql/data
-    networks:
-      - kong-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   auth-service:
     container_name: auth-service
     build: 
       context: ./backend/Authentication
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/Authentication/.env
     environment:
       - JWT_SECRET=esd_jwt_secret_key
       - JWT_ALGORITHM=HS256
@@ -50,9 +36,6 @@ services:
       - DB_PASSWORD=postgres
     ports:
       - "5001:5001"
-    depends_on:
-      auth-db:
-        condition: service_healthy
     networks:
       - kong-net
 
@@ -61,49 +44,24 @@ services:
       context: ./backend/post
       dockerfile: Dockerfile
     restart: always
-    environment:
-      - JWT_SECRET=esd_jwt_secret_key
-      - JWT_ALGORITHM=HS256
-      - DB_NAME=postdb
-      - DB_USER=postgres
-      - DB_PASSWORD=root
-      - DB_HOST=post-db
-      - DB_PORT=5432
-      - CLOUDINARY_CLOUD_NAME=dzex9mqkl
-      - CLOUDINARY_API_KEY=233698824311556
-      - CLOUDINARY_API_SECRET=dMhJArOvb79qG5XVqtQqllI6h1E
-      - PYTHONUNBUFFERED=1
+    env_file:
+      - ./backend/post/.env
     ports:
       - "5000:5000"
-    depends_on:
-      post-db:
-        condition: service_healthy
     networks:
       - kong-net
-
-  post-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: postdb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
-    networks:
-      - kong-net
-    volumes:
-      - post_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   user-service:
     build: 
       context: ./backend/User
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/User/.env
     environment:
       - JWT_SECRET=esd_jwt_secret_key
       - JWT_ALGORITHM=HS256
+    ports:
+      - "5002:5002"
     networks:
       - kong-net
   rabbitmq-listener:
@@ -116,6 +74,76 @@ services:
       - kong-net
 
 
+  location-service:
+    build:
+      context: ./backend/location
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/location/.env
+    ports:
+      - "4500:4500"
+    networks:
+      - kong-net
+
+  ai-microservice:
+    build:
+      context: ./backend/ai-microservice
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/ai-microservice/.env
+    environment:
+      - PLACES_MICROSERVICE_URL=http://location-service:4500
+    ports:
+      - "3000:3000"
+    networks:
+      - kong-net
+    depends_on:
+      - location-service
+
+  itinerary-service:
+    build:
+      context: ./backend/itinerary-microservice
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/itinerary-microservice/.env
+    environment:
+      - JWT_SECRET=esd_jwt_secret_key
+      - JWT_ALGORITHM=HS256
+    ports:
+      - "5400:5400"
+    networks:
+      - kong-net
+    restart: always
+
+  social-service:
+    build:
+      context: ./backend/Social
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/Social/.env
+    restart: always
+    ports:
+      - "5003:5003"
+    networks:
+      - kong-net
+
+  create-post-service:
+    build: 
+      context: ./backend/create
+      dockerfile: Dockerfile
+    environment:
+      - JWT_SECRET=esd_jwt_secret_key
+      - JWT_ALGORITHM=HS256
+      - PREFERENCES_SERVICE_URL=http://user-service:5002 
+      - POST_SERVICE_URL=http://post-service:5000
+    depends_on:
+      - user-service
+    ports:
+      - "5005:5005"
+    networks:
+      - kong-net
+
+
 networks:
   kong-net:
     name: g3t1_kong-net
@@ -124,4 +152,4 @@ networks:
 volumes:
   kong_data:
   post_data:
-  auth_data: 
+  auth_data:

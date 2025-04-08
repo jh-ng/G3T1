@@ -3,7 +3,9 @@
     <v-container>
       <v-row>
         <v-col cols="12" class="text-center">
-          <h2 class="text-h4 mb-2">{{ username || `User ${userId}` }}</h2>
+          <h2 class="text-h4 mb-2">
+            {{ isOwnProfile ? 'Your Profile' : (username || `User ${userId}`) }}
+          </h2>
           <p class="text-subtitle-1">{{ posts.length }} {{ posts.length === 1 ? 'post' : 'posts' }}</p>
         </v-col>
       </v-row>
@@ -43,7 +45,7 @@ import defaultAvatar from '@/assets/opm.jpg';
 export default {
   name: 'UserProfile',
   components: {
-    Post
+    Post,
   },
   data() {
     return {
@@ -52,7 +54,8 @@ export default {
       posts: [],
       loading: false,
       error: null,
-      userAvatar: defaultAvatar
+      userAvatar: defaultAvatar,
+      isOwnProfile: false, 
     };
   },
   created() {
@@ -60,16 +63,16 @@ export default {
     this.fetchUserPosts();
   },
   watch: {
-    '$route.params.id': function(newId) {
+    '$route.params.id': function (newId) {
       this.userId = newId;
       this.fetchUserPosts();
-    }
+    },
   },
   methods: {
     async fetchUserPosts() {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const token = authService.getToken();
         if (!token) {
@@ -79,8 +82,8 @@ export default {
 
         const response = await fetch(`http://localhost:8000/api/posts/user/${this.userId}`, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (!response.ok) {
@@ -91,10 +94,13 @@ export default {
         this.posts = data.posts;
         this.username = data.username;
 
-        // If viewing own profile, update avatar if available
+        // Check if viewing own profile
         const currentUser = authService.getCurrentUser();
         if (currentUser && currentUser.id === parseInt(this.userId)) {
           this.userAvatar = currentUser.avatar || defaultAvatar;
+          this.isOwnProfile = true; // Set isOwnProfile to true
+        } else {
+            this.isOwnProfile = false;
         }
       } catch (err) {
         this.error = err.message;
@@ -106,14 +112,12 @@ export default {
       }
     },
     handleLike(postId) {
-      // Implement like functionality
       console.log('Liking post:', postId);
     },
     handleComment(postId) {
-      // Implement comment functionality
       console.log('Commenting on post:', postId);
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -134,4 +138,4 @@ export default {
   gap: 2rem;
   padding: 2rem 0;
 }
-</style> 
+</style>

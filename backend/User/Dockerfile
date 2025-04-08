@@ -1,10 +1,15 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
-COPY requirements.txt ./
-RUN pip install -r requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY User_app.py .
 
-CMD ["python", "user.py"] 
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=userapp.py
+
+EXPOSE 5001
+
+CMD ["python", "User_app.py"]

@@ -3,11 +3,15 @@
     <v-card class="mx-auto" max-width="800">
       <v-card-title class="text-h5 mb-4">Create New Post</v-card-title>
       <v-card-text>
-        <v-form @submit.prevent="handleSubmit" enctype="multipart/form-data">
+        <v-form
+          ref="postForm"
+          @submit.prevent="handleSubmit"
+          enctype="multipart/form-data"
+        >
           <v-text-field
             v-model="title"
             label="Title"
-            :rules="[v => !!v || 'Title is required']"
+            :rules="[(v) => !!v || 'Title is required']"
             required
             class="mb-4"
           ></v-text-field>
@@ -15,7 +19,7 @@
           <v-textarea
             v-model="content"
             label="Content"
-            :rules="[v => !!v || 'Content is required']"
+            :rules="[(v) => !!v || 'Content is required']"
             required
             rows="6"
             class="mb-4"
@@ -36,7 +40,28 @@
             contain
             class="mb-4"
           ></v-img>
-
+          <v-select
+            v-model="selectedPreferences"
+            :items="preferences"
+            label="Select Tags"
+            multiple
+            chips
+            clearable
+            class="mb-4"
+          />
+          <!-- <v-text-field
+            v-model="location"
+            label="Location"
+            placeholder="e.g., Tokyo, Japan"
+            class="mb-4"
+          /> -->
+          <input v-model="searchQuery" @keydown.enter="searchLocation" placeholder="Search for a place..." />
+          <div class="map-container" ref="myMap"></div>
+          <p v-if="selectedLocation">
+            Selected: {{ selectedLocation.address }} ({{
+              selectedLocation.lat
+            }}, {{ selectedLocation.lon }})
+          </p>
           <v-btn
             color="primary"
             type="submit"
@@ -45,22 +70,14 @@
             block
             class="mb-2"
           >
-            {{ loading ? 'Creating Post...' : 'Create Post' }}
+            {{ loading ? "Creating Post..." : "Create Post" }}
           </v-btn>
 
-          <v-alert
-            v-if="error"
-            type="error"
-            class="mt-4"
-          >
+          <v-alert v-if="error" type="error" class="mt-4">
             {{ error }}
           </v-alert>
 
-          <v-alert
-            v-if="success"
-            type="success"
-            class="mt-4"
-          >
+          <v-alert v-if="success" type="success" class="mt-4">
             Post created successfully!
           </v-alert>
         </v-form>
@@ -70,35 +87,167 @@
 </template>
 
 <script>
-import authService from '../services/auth';
+import authService from "../services/auth";
+import maplibre from 'maplibre-gl';
 
 export default {
-  name: 'CreatePost',
+  name: "CreatePost",
   data() {
     return {
-      title: '',
-      content: '',
+      title: "",
+      content: "",
       image: null,
       imagePreview: null,
       loading: false,
       error: null,
-      success: false
+      success: false,
+      preferences: [],
+      selectedPreferences: [],
+      location: "",
+      map: null,
+      marker: null,
+      selectedLocation: null,
+      searchQuery: '',
+      myAPIKey: process.env.VUE_APP_GEOAPIFY_API_KEY,
     };
+  },
+  created() {
+    this.fetchPreferences();
   },
   watch: {
     image(file) {
       if (file) {
         const reader = new FileReader();
-        reader.onload = e => {
+        reader.onload = (e) => {
           this.imagePreview = e.target.result;
         };
         reader.readAsDataURL(file);
       } else {
         this.imagePreview = null;
       }
+    },
+  },
+  mounted() {
+    const mapStyle = 'https://maps.geoapify.com/v1/styles/osm-carto/style.json';
+
+    this.map = new maplibre.Map({
+      container: this.$refs.myMap,
+      style: `${mapStyle}?apiKey=${this.myAPIKey}`,
+      center: [0, 20],
+      zoom: 2,
+    });
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          this.map.setCenter([longitude, latitude]);
+          this.map.setZoom(12);
+        },
+        (err) => {
+          console.warn("Geolocation failed:", err.message);
+        }
+      );
     }
+
+    this.map.on('click', (e) => {
+      const { lng, lat } = e.lngLat;
+
+      (async () => {
+        const res = await fetch(`https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=${this.myAPIKey}`);
+        const data = await res.json();
+
+        const address = data.features[0]?.properties.formatted || "Unknown location";
+
+        if (this.marker) {
+          this.marker.setLngLat([lng, lat]);
+          this.marker.getPopup().setText(address);
+        } else {
+          const popup = new maplibre.Popup().setText(address);
+          this.marker = new maplibre.Marker()
+            .setLngLat([lng, lat])
+            .setPopup(popup)
+            .addTo(this.map);
+        }
+
+        this.selectedLocation = { lat, lon: lng, address };
+      })();
+    });
   },
   methods: {
+    async fetchPreferences() {
+      try {
+        const token = authService.getToken();
+        if (!token) {
+          this.$router.push("/login");
+          return;
+        }
+
+        const response = await fetch(`http://localhost:5005/api/user/taste-preferences`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch preferences");
+        }
+
+        const data = await response.json();
+        const tastePreferences = data.taste_preferences || {};
+        // Collect all array values from the taste_preferences object and flatten them
+        this.preferences = [];
+        for (const key in tastePreferences) {
+          if (key === 'startTime' || key === 'endTime') {
+            continue; // Skip 'startTime' and 'endTime'
+          }
+          const value = tastePreferences[key];
+          if (Array.isArray(value)) {
+            this.preferences = this.preferences.concat(value);
+          } else if (typeof value === 'string') {
+            this.preferences.push(value);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load preferences:", err.message);
+        this.preferences = []; // fallback to empty list
+      }
+    },
+
+    async searchLocation() {
+      if (!this.searchQuery) return;
+
+      const response = await fetch(
+        `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(this.searchQuery)}&apiKey=${this.myAPIKey}`
+      );
+      const data = await response.json();
+
+      if (data.features.length > 0) {
+        const feature = data.features[0];
+        const { lat, lon } = feature.properties;
+
+        this.map.setCenter([lon, lat]);
+        this.map.setZoom(12);
+
+        // Update marker
+        if (this.marker) {
+          this.marker.setLngLat([lon, lat]);
+          this.marker.setPopup(new maplibre.Popup().setText(feature.properties.formatted)).addTo(this.map);
+        } else {
+          this.marker = new maplibre.Marker()
+            .setLngLat([lon, lat])
+            .setPopup(new maplibre.Popup().setText(feature.properties.formatted))
+            .addTo(this.map);
+        }
+
+        this.selectedLocation = {
+          lat,
+          lon,
+          address: feature.properties.formatted,
+        };
+      }
+    },
+
     async handleSubmit() {
       this.loading = true;
       this.error = null;
@@ -107,63 +256,80 @@ export default {
       try {
         const token = authService.getToken();
         if (!token) {
-          this.$router.push('/login');
+          this.$router.push("/login");
           return;
         }
 
         // Create FormData object
         const formData = new FormData();
-        formData.append('title', this.title);
-        formData.append('content', this.content);
+        formData.append("title", this.title);
+        formData.append("content", this.content);
+        formData.append(
+          "selected_preferences",
+          this.selectedPreferences.join(",")
+        );
+        if (this.selectedLocation?.address) {
+          formData.append('location', this.selectedLocation.address);
+        }
         if (this.image) {
-          formData.append('image', this.image);
+          formData.append("image", this.image);
         }
 
-        const response = await fetch('http://localhost:8000/api/posts', {
-          method: 'POST',
+        const response = await fetch("http://localhost:5005/api/posts", {
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
-          body: formData
+          body: formData,
         });
 
+        const result = await response.json();
+
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to create post');
+          throw new Error(result.error || "Failed to create post");
         }
 
-        await response.json();
         this.success = true;
-        
+
         // Clear form
-        this.title = '';
-        this.content = '';
+        this.title = "";
+        this.content = "";
         this.image = null;
         this.imagePreview = null;
-        
+
+        this.$nextTick(() => {
+          this.$refs.postForm.resetValidation();
+        });
+
         // Redirect to home page after a short delay
         setTimeout(() => {
-          this.$router.push('/');
-        }, 1500);
-
+          this.$router.push("/");
+        }, 500);
       } catch (err) {
         this.error = err.message;
-        if (err.message.includes('token')) {
+        if (err.message.includes("token")) {
           // If token is invalid, redirect to login
-          this.$router.push('/login');
+          this.$router.push("/login");
         }
       } finally {
         this.loading = false;
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
 <style scoped>
+@import '~maplibre-gl/dist/maplibre-gl.css';
+
+.map-container {
+  height: 400px;
+  width: 100%;
+}
+
 .create-post-container {
   padding: 2rem;
   max-width: 800px;
   margin: 0 auto;
 }
-</style> 
+</style>

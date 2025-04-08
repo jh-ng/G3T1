@@ -2,11 +2,19 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import jwt
 import os
+import requests
 from datetime import datetime, timedelta
-import psycopg2
+from supabase import create_client, Client
 from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
+app.config['PROPAGATE_EXCEPTIONS'] = True  # add this
+app.config['DEBUG'] = True  # optional: shows errors during dev
 CORS(app, resources={
     r"/*": {
         "origins": ["http://localhost:8080"],
@@ -16,78 +24,121 @@ CORS(app, resources={
     }
 })
 
-# Database configuration
-DB_CONFIG = {
-    'dbname': os.getenv('DB_NAME', 'authdb'),
-    'user': os.getenv('DB_USER', 'postgres'),
-    'password': os.getenv('DB_PASSWORD', 'postgres'),
-    'host': os.getenv('DB_HOST', 'auth-db'),
-    'port': '5432'
-}
+# Initialize Supabase client with environment variables
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
 
-def get_db_connection():
-    return psycopg2.connect(**DB_CONFIG)
+# Validate that environment variables are set
+if not supabase_url or not supabase_key:
+    print("Warning: SUPABASE_URL or SUPABASE_KEY not set properly")
+    
+supabase: Client = create_client(supabase_url, supabase_key)
 
-def create_tables():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(50) UNIQUE NOT NULL,
-            email VARCHAR(100) UNIQUE NOT NULL,
-            password_hash VARCHAR(200) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+# Define the table name for authentication
+AUTHENTICATION_TABLE = "authentication"
+
+# Kong API Gateway URL (adjust as needed)
+KONG_URL = os.environ.get("KONG_URL", "http://localhost:8000")
+
+# JWT verification and token_required decorator
+def verify_token(token):
+    try:
+        payload = jwt.decode(
+            token,
+            os.getenv('JWT_SECRET', 'esd_jwt_secret_key'),
+            algorithms=[os.getenv('JWT_ALGORITHM', 'HS256')]
         )
-    ''')
-    conn.commit()
-    cur.close()
-    conn.close()
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
 
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'No token provided'}), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = verify_token(token)
+        
+        if not payload:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+            
+        request.user = payload
+        return f(*args, **kwargs)
+    return decorated
+
+# User Registration (POST)
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     data = request.get_json()
+
+    print("[DEBUG] Received data:", data)
     
     if not all(k in data for k in ['username', 'email', 'password']):
         return jsonify({'error': 'Missing required fields'}), 400
     
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
     try:
-        # Check if username or email already exists
-        cur.execute('SELECT username, email FROM users WHERE username = %s OR email = %s',
-                   (data['username'], data['email']))
-        if cur.fetchone():
-            return jsonify({'error': 'Username or email already exists'}), 400
+        password_hash = generate_password_hash(data['password'])  
+
+        # Insert new user in auth database with is_first_login flag set to true
+        response = supabase.table(AUTHENTICATION_TABLE).insert({
+            "username": data['username'],
+            "email": data['email'],
+            "password_hash": password_hash,
+            "is_first_login": True  # Add is_first_login flag
+        }).execute()
+
+        # Check response before accessing it
+        if not response.data or len(response.data) == 0:
+            return jsonify({'error': 'Failed to register user'}), 500
+
+        user = response.data[0]
+
+        # Now create a user record in the user service through Kong
+        try:
+            # Prepare the data to send to user service
+            user_data = {
+                "user_id": user['id'],
+                "email": user['email'],
+                "username": user['username']
+            }
+            
+            # Send request to user service through Kong
+            user_service_response = requests.post(
+                f"{KONG_URL}/api/internal/user/create",
+                json=user_data,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            # Check if user creation in user service was successful
+            if user_service_response.status_code not in (200, 201):
+                # If user service fails, we should log this but still return success
+                # as the auth part worked
+                print(f"Warning: User service creation failed: {user_service_response.text}")
         
-        # Hash password and insert user
-        password_hash = generate_password_hash(data['password'])
-        cur.execute('''
-            INSERT INTO users (username, email, password_hash)
-            VALUES (%s, %s, %s)
-            RETURNING id, username, email
-        ''', (data['username'], data['email'], password_hash))
-        
-        user = cur.fetchone()
-        conn.commit()
+        except Exception as e:
+            # Log error but don't fail the registration if user service is unavailable
+            print(f"Error creating user in user service: {str(e)}")
         
         return jsonify({
             'message': 'User registered successfully',
             'user': {
-                'id': user[0],
-                'username': user[1],
-                'email': user[2]
+                'id': user['id'],
+                'username': user['username'],
+                'email': user['email'],
+                'created_at': user['created_at'],
+                'is_first_login': user['is_first_login']
             }
         }), 201
         
     except Exception as e:
-        conn.rollback()
         return jsonify({'error': str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
 
+# User Login & JWT Token Generation (POST)
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -95,22 +146,30 @@ def login():
     if not all(k in data for k in ['username', 'password']):
         return jsonify({'error': 'Missing required fields'}), 400
     
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
     try:
-        cur.execute('SELECT id, username, password_hash FROM users WHERE username = %s',
-                   (data['username'],))
-        user = cur.fetchone()
+        # Get user by username - now also selecting is_first_login
+        response = supabase.table(AUTHENTICATION_TABLE).select('id, username, password_hash, is_first_login').eq(
+            'username', data['username']
+        ).execute()
         
-        if not user or not check_password_hash(user[2], data['password']):
+        if not response.data:
             return jsonify({'error': 'Invalid credentials'}), 401
         
-        # Generate JWT token
+        user = response.data[0]
+        
+        # Verify password
+        if not check_password_hash(user['password_hash'], data['password']):
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        # Get is_first_login value, default to True if not present for backward compatibility
+        is_first_login = user.get('is_first_login', True)
+        
+        # Generate JWT token - now including is_first_login
         token = jwt.encode(
             {
-                'user_id': user[0],
-                'username': user[1],
+                'user_id': user['id'],
+                'username': user['username'],
+                'is_first_login': is_first_login,  # Include is_first_login in token
                 'exp': datetime.utcnow() + timedelta(days=1)
             },
             os.getenv('JWT_SECRET', 'esd_jwt_secret_key'),
@@ -120,19 +179,18 @@ def login():
         return jsonify({
             'token': token,
             'user': {
-                'id': user[0],
-                'username': user[1]
+                'id': user['id'],
+                'username': user['username'],
+                'is_first_login': is_first_login  # Include in response
             }
         }), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
 
+# Verify JWT Token (GET)
 @app.route('/api/auth/verify-token', methods=['GET'])
-def verify_token():
+def verify_token_endpoint():
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'error': 'No token provided'}), 401
@@ -151,6 +209,56 @@ def verify_token():
     except jwt.InvalidTokenError:
         return jsonify({'error': 'Invalid token'}), 401
 
+# Delete user from auth database (DELETE)
+# This endpoint will be called by the user service after it deletes the user
+@app.route('/api/auth/user/<user_id>', methods=['DELETE'])
+@token_required
+def delete_user(user_id):
+    # Check if the user is deleting their own account
+    if user_id != str(request.user["user_id"]):
+        return jsonify({"error": "Unauthorized access"}), 403
+    
+    try:
+        # Check if user exists
+        check_result = supabase.table(AUTHENTICATION_TABLE).select("*").eq("id", user_id).execute()
+        
+        if len(check_result.data) == 0:
+            return jsonify({"error": "User not found in auth database"}), 404
+        
+        # Delete user from auth database
+        result = supabase.table(AUTHENTICATION_TABLE).delete().eq("id", user_id).execute()
+        
+        if len(result.data) == 0:
+            return jsonify({"error": "Failed to delete user from auth database"}), 500
+        
+        return jsonify({"message": "User deleted successfully from auth database"}), 200
+        
+    except Exception as e:
+        print(f"Error deleting user from auth database: {str(e)}")
+        return jsonify({"error": f"Error deleting user from auth database: {str(e)}"}), 500
+
+# Add this new endpoint to update is_first_login status
+@app.route('/api/auth/update-first-login', methods=['POST'])
+@token_required
+def update_first_login():
+    try:
+        user_id = request.user.get('user_id')
+        
+        # Update the is_first_login flag to False
+        result = supabase.table(AUTHENTICATION_TABLE).update({
+            "is_first_login": False
+        }).eq("id", user_id).execute()
+        
+        if not result.data or len(result.data) == 0:
+            return jsonify({'error': 'Failed to update user status'}), 500
+            
+        return jsonify({
+            'message': 'First login status updated successfully',
+            'user_id': user_id
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
-    create_tables()
-    app.run(host='0.0.0.0', port=5001) 
+    app.run(host='0.0.0.0', port=5001)

@@ -51,8 +51,16 @@ export default {
       this.error = null;
       
       try {
-        await authService.login(this.username, this.password);
-        this.$router.push('/');
+        const response = await authService.login(this.username, this.password);
+        
+        // Check if this is the user's first login
+        if (response.user && response.user.is_first_login) {
+          // Redirect to user preferences page
+          this.$router.push('/user-preferences');
+        } else {
+          // Redirect to home page for returning users
+          this.$router.push('/');
+        }
       } catch (err) {
         this.error = err.response?.data?.message || 'Login failed. Please try again.';
       } finally {
@@ -64,6 +72,7 @@ export default {
 </script>
 
 <style scoped>
+/* No changes to styling */
 .login-container {
   display: flex;
   justify-content: center;
@@ -138,4 +147,4 @@ button:disabled {
   margin-top: 1rem;
   font-size: 0.875rem;
 }
-</style> 
+</style>
