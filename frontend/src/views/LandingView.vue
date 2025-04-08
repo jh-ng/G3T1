@@ -14,11 +14,8 @@
                 JetSetGo helps you plan the perfect trip by analyzing your preferences and combining them with real-time data and community insights.
               </p>
               <div class="d-flex flex-column flex-sm-row mt-4 gap-3 text-start">
-                <button class="btn btn-light btn-lg fw-semibold animate__animated animate__pulse animate__infinite animate__slower">
-                  Create Your Trip
-                </button>
-                <button class="btn btn-outline-light btn-lg">
-                  Explore Itineraries
+                <button @click="$router.push('/login')" class="btn btn-light btn-lg fw-semibold animate__animated animate__pulse animate__infinite animate__slower">
+                  Create Now 
                 </button>
               </div>
               <div class="mt-4 d-flex align-items-center text-start">
@@ -61,7 +58,7 @@
             <!-- Feature 1 -->
             <div class="col-md-4" data-aos="zoom-in" data-aos-delay="200">
               <div class="card h-100 border-0 bg-light feature-card">
-                <img src="../assets/herobanner.png" class="card-img-top feature-image" alt="AI Itinerary">
+                <img src="../assets/AIbanner.png" class="card-img-top feature-image" alt="AI Itinerary">
                 <div class="card-body p-4">
                   <div class="feature-icon bg-primary text-white mb-3">
                     <i class="fas fa-calendar-alt"></i>
@@ -77,7 +74,7 @@
             <!-- Feature 2 -->
             <div class="col-md-4" data-aos="zoom-in" data-aos-delay="400">
               <div class="card h-100 border-0 bg-light feature-card">
-                <img src="../assets/herobanner.png" class="card-img-top feature-image" alt="Community">
+                <img src="../assets/socialBanner.png" class="card-img-top feature-image" alt="Community">
                 <div class="card-body p-4">
                   <div class="feature-icon bg-primary text-white mb-3">
                     <i class="fas fa-users"></i>
@@ -93,7 +90,7 @@
             <!-- Feature 3 -->
             <div class="col-md-4" data-aos="zoom-in" data-aos-delay="600">
               <div class="card h-100 border-0 bg-light feature-card">
-                <img src="../assets/herobanner.png" class="card-img-top feature-image" alt="Real-time updates">
+                <img src="../assets/realTimeBanner.png" class="card-img-top feature-image" alt="Real-time updates">
                 <div class="card-body p-4">
                   <div class="feature-icon bg-primary text-white mb-3">
                     <i class="fas fa-chart-line"></i>
@@ -130,7 +127,7 @@
               <h3 class="mt-3 h5 fw-bold">Share Your Preferences</h3>
               <p class="text-muted">Tell us about your travel style, interests, budget, and must-see attractions.</p>
               <div class="step-image-container mt-4">
-                <img src="../assets/herobanner.png" alt="Share Preferences" class="step-image">
+                <img src="../assets/share.png" alt="Share Preferences" class="step-image">
               </div>
             </div>
             <div class="col-md-4 text-center" data-aos="fade-up" data-aos-delay="400">
@@ -138,7 +135,7 @@
               <h3 class="mt-3 h5 fw-bold">AI Creates Your Itinerary</h3>
               <p class="text-muted">Our Gemini AI analyzes data to craft a personalized journey just for you.</p>
               <div class="step-image-container mt-4">
-                <img src="../assets/herobanner.png" alt="AI Processing" class="step-image">
+                <img src="../assets/AI2.png" alt="AI Processing" class="step-image">
               </div>
             </div>
             <div class="col-md-4 text-center" data-aos="fade-left" data-aos-delay="600">
@@ -146,7 +143,7 @@
               <h3 class="mt-3 h5 fw-bold">Explore and Customize</h3>
               <p class="text-muted">Fine-tune your itinerary, share with friends, and explore community insights.</p>
               <div class="step-image-container mt-4">
-                <img src="../assets/herobanner.png" alt="Explore" class="step-image">
+                <img src="../assets/custom.png" alt="Explore" class="step-image">
               </div>
             </div>
           </div>
@@ -165,7 +162,7 @@
                 Join thousands of travelers who are discovering the world through JetSetGo's AI-powered platform.
               </p>
               <div class="mt-5">
-                <button class="btn btn-light btn-lg me-3 animate__animated animate__heartBeat animate__infinite animate__slower">Get Started Free</button>
+                <button @click="$router.push('/login')" class="btn btn-light btn-lg me-3 animate__animated animate__heartBeat animate__infinite animate__slower">Get Started Free</button>
               </div>
             </div>
           </div>
