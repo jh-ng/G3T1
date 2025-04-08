@@ -125,6 +125,21 @@ services:
         methods:
           - GET
           - OPTIONS
+  #Notification Service
+  - name: notification-service
+    url: https://personal-nrm7dwxa.outsystemscloud.com/NotificationService/rest/NotificationAPI
+    tls_verify: false
+    routes:
+      - name: notification-routes
+        paths:
+          - /api/notification
+        strip_path: true
+        methods:
+          - GET
+          - POST
+          - OPTIONS
+
+
 
   - name: social-service
     url: http://social-service:5003
