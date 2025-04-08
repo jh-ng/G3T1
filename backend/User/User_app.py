@@ -74,7 +74,7 @@ def create_user():
             return jsonify({"message": "User already exists", "user": check_result.data[0]}), 200
         
         user_data = {
-            "user_id": data["user_id"],
+            "userId": data["user_id"],
             "email": data["email"],
             "username": data["username"],
             "created_at": datetime.now().isoformat(),
@@ -149,8 +149,8 @@ def update_user(user_id):
             return jsonify({"error": "User not found"}), 404
         
         data["updated_at"] = datetime.now().isoformat()
-        if "user_id" in data:
-            del data["user_id"]
+        if "userId" in data:
+            del data["userId"]
             
         result = supabase.table(USER_TABLE).update(data).eq("userId", user_id).execute()
         

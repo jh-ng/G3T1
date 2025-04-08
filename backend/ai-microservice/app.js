@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 app.use(express.json());
@@ -26,32 +27,79 @@ const PRICE_LEVEL_MAPPING = {
 };
 
 /**
- * Get user preferences from UserPref in JSON format
+ * Get user preferences from User microservice
  */
-/*
-const getUserPreferences = async (userID) => {
+const getUserPreferences = async (req) => {
   try {
-    const response = await axios.get(`${process.env.USER_MICROSERVICE_URL}/api/user/${userID}/preferences`);
-    return response.data;
+    // Extract user ID from JWT token
+    const token = req.headers.authorization;
+    if (!token) {
+      console.log('No authorization token provided');
+      throw new Error('No authorization token provided');
+    }
+
+    // Get user ID from JWT token
+    const decoded = jwt.verify(token.split(' ')[1], process.env.JWT_SECRET);
+    const userID = decoded.user_id;
+    console.log(`\n====== USER PREFERENCES DEBUG ======`);
+    console.log(`JWT decoded: ${JSON.stringify(decoded)}`);
+    console.log(`User ID from token: ${userID}`);
+
+    // Call user microservice to get preferences
+    const userServiceUrl = process.env.USER_SERVICE_URL;
+    console.log(`Calling user service at ${userServiceUrl}/api/user/${userID}/taste-preferences`);
+    
+    const response = await axios.get(`${userServiceUrl}/api/user/${userID}/taste-preferences`, {
+      headers: {
+        'Authorization': token
+      }
+    });
+
+    console.log(`User service response status: ${response.status}`);
+    console.log(`User service response data: ${JSON.stringify(response.data, null, 2)}`);
+    
+    const preferences = response.data.taste_preferences;
+    console.log(`Extracted preferences: ${JSON.stringify(preferences, null, 2)}`);
+    
+    // Map the preferences to the format expected by the AI service
+    const mappedPreferences = {
+      travelStyle: preferences.travelStyle || ["Active"],
+      travelSites: preferences.travelSites || ["Nature Sites"],
+      diet: preferences.diet || ["None"],
+      startTime: preferences.startTime || "08:30",
+      endTime: preferences.endTime || "22:00"
+    };
+    
+    console.log(`Mapped preferences: ${JSON.stringify(mappedPreferences, null, 2)}`);
+    console.log(`====== END USER PREFERENCES DEBUG ======\n`);
+    
+    return mappedPreferences;
   } catch (error) {
     console.error('Error fetching user preferences:', error);
-    return null;
+    
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error(`Response status: ${error.response.status}`);
+      console.error(`Response data: ${JSON.stringify(error.response.data)}`);
+      console.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received:', error.request);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Request setup error:', error.message);
+    }
+    
+    // Return default preferences if there's an error
+    return {
+      travelStyle: ["Active"],
+      travelSites: ["Nature Sites"],
+      diet: ["None"],
+      startTime: "08:30",
+      endTime: "22:00"
+    };
   }
-};
-*/
-
-/**
- * Get dummy user preferences for testing
- */
-const getDummyUserPreferences = async (userID) => {
-  // Return dummy data for testing
-  return {
-    travelStyle: ["Active"],
-    travelSites: ["Nature Sites"],
-    diet: ["Vegetarian"],
-    startTime: "08:30",
-    endTime: "22:00"
-  };
 };
 
 /**
@@ -363,12 +411,20 @@ const generateGeminiPrompt = (preferences, locationData, tripDetails) => {
 
     Please create a day-by-day itinerary in JSON format where each day is a key and the value is an array of activities.
     Each activity should include:
-    - Time
-    - Location name
-    - Description
-    - Travel time between locations
-    - Estimated duration
+    - Time (in 24-hour format, e.g., "09:00")
+    - Location name (specific name, no qualifiers)
+    - Description (detailed description of the activity)
+    - Travel time between locations (in hours and minutes format, e.g., "1h 30mins" or "45mins")
+    - Estimated duration (in hours and minutes format, e.g., "2h" or "1h 15mins")
     - Any relevant notes (e.g., dietary options, accessibility)
+
+    IMPORTANT TIME REQUIREMENTS:
+    - Travel time MUST be specified in hours and minutes format (e.g., "1h 30mins" or "45mins") rather than just minutes
+    - Duration MUST be specified in hours and minutes format (e.g., "2h" or "1h 15mins") rather than just minutes
+    - If duration or travel time is 0, use "0mins" (not "0h")
+    - NEVER use "0mins" for travel time unless activities are in the exact same location
+    - NEVER use "0mins" for duration
+    - Ensure activities don't overlap in time, accounting for both duration and travel time
 
     Format the response as a valid JSON object with days as keys and activities as values.
     
@@ -403,7 +459,7 @@ app.post('/api/itinerary', async (req, res) => {
     console.log(`\n====== Generating itinerary for ${destination} ======`);
 
     // Get user preferences (using dummy data for now)
-    const preferences = await getDummyUserPreferences();
+    const preferences = await getUserPreferences(req);
     preferences.budget = budget.toUpperCase();
 
     // Get location data

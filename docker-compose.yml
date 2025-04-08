@@ -93,12 +93,16 @@ services:
       - ./backend/ai-microservice/.env
     environment:
       - PLACES_MICROSERVICE_URL=http://location-service:4500
+      - USER_SERVICE_URL=http://user-service:5002
+      - JWT_SECRET=esd_jwt_secret_key
+      - JWT_ALGORITHM=HS256
     ports:
       - "3000:3000"
     networks:
       - kong-net
     depends_on:
       - location-service
+      - user-service
 
   itinerary-service:
     build:
