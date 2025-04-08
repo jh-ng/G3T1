@@ -68,13 +68,13 @@ def create_user():
             return jsonify({"error": f"Missing required field: {field}"}), 400
 
     try:
-        check_result = supabase.table(USER_TABLE).select("*").eq("user_id", data["user_id"]).execute()
+        check_result = supabase.table(USER_TABLE).select("*").eq("userId", data["user_id"]).execute()
         
         if len(check_result.data) > 0:
             return jsonify({"message": "User already exists", "user": check_result.data[0]}), 200
         
         user_data = {
-            "user_id": data["user_id"],
+            "userId": data["user_id"],
             "email": data["email"],
             "username": data["username"],
             "created_at": datetime.now().isoformat(),
@@ -101,7 +101,7 @@ def get_user(user_id):
         return jsonify({"error": "Unauthorized access"}), 403
     
     try:
-        result = supabase.table(USER_TABLE).select("*").eq("user_id", user_id).execute()
+        result = supabase.table(USER_TABLE).select("*").eq("userId", user_id).execute()
 
         if len(result.data) == 0:
             return jsonify({"error": "User not found"}), 404
@@ -119,7 +119,7 @@ def get_taste_preferences(user_id):
         return jsonify({"error": "Unauthorized access"}), 403
     
     try:
-        result = supabase.table(USER_TABLE).select("taste_preferences").eq("user_id", user_id).execute()
+        result = supabase.table(USER_TABLE).select("taste_preferences").eq("userId", user_id).execute()
 
         if len(result.data) == 0:
             return jsonify({"error": "User not found"}), 404
@@ -143,16 +143,16 @@ def update_user(user_id):
         return jsonify({"error": "No update data provided"}), 400
     
     try:
-        check_result = supabase.table(USER_TABLE).select("*").eq("user_id", user_id).execute()
+        check_result = supabase.table(USER_TABLE).select("*").eq("userId", user_id).execute()
         
         if len(check_result.data) == 0:
             return jsonify({"error": "User not found"}), 404
         
         data["updated_at"] = datetime.now().isoformat()
-        if "user_id" in data:
-            del data["user_id"]
+        if "userId" in data:
+            del data["userId"]
             
-        result = supabase.table(USER_TABLE).update(data).eq("user_id", user_id).execute()
+        result = supabase.table(USER_TABLE).update(data).eq("userId", user_id).execute()
         
         if len(result.data) == 0:
             return jsonify({"error": "Failed to update user"}), 500
@@ -172,13 +172,13 @@ def delete_user(user_id):
     
     try:
         # First check if user exists
-        check_result = supabase.table(USER_TABLE).select("*").eq("user_id", user_id).execute()
+        check_result = supabase.table(USER_TABLE).select("*").eq("userId", user_id).execute()
         
         if len(check_result.data) == 0:
             return jsonify({"error": "User not found"}), 404
         
         # Delete the user from the user service database
-        result = supabase.table(USER_TABLE).delete().eq("user_id", user_id).execute()
+        result = supabase.table(USER_TABLE).delete().eq("userId", user_id).execute()
         
         if len(result.data) == 0:
             return jsonify({"error": "Failed to delete user from user service"}), 500
