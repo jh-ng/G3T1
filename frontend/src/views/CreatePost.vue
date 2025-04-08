@@ -55,7 +55,7 @@
             placeholder="e.g., Tokyo, Japan"
             class="mb-4"
           /> -->
-          <input v-model="searchQuery" @keydown.enter="searchLocation" placeholder="Search for a place..." />
+          <input v-model="searchQuery" @keydown.enter.prevent="searchLocation" placeholder="Search for a place..." />
           <div class="map-container" ref="myMap"></div>
           <p v-if="selectedLocation">
             Selected: {{ selectedLocation.address }} ({{
