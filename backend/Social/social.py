@@ -7,6 +7,8 @@ import pika
 import json
 from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
+from datetime import datetime
+
 
 app = Flask(__name__)
 CORS(app)
@@ -73,6 +75,9 @@ def like_post():
         .eq("liked_by_user_id", payload["user_id"]) \
         .execute()
     
+    created_at = existing_like.data[0]['created_at'] if existing_like.data else datetime.now().isoformat()
+
+
     if existing_like.data:
         # Unlike: delete the like
         supabase.table("likes") \
@@ -89,7 +94,8 @@ def like_post():
             "post_id": post_id,
             "liked_by_user_id": payload['user_id'],
             "liked_by_username": payload['username'],
-            "post_owner_id": post_owner_id
+            "post_owner_id": post_owner_id,
+            
         }).execute()
 
         # Send event to RabbitMQ
@@ -97,7 +103,8 @@ def like_post():
             "post_id": post_id,
             "liked_by_user_id": payload["user_id"],
             "liked_by_username": payload["username"],
-            "post_owner_id": post_owner_id
+            "post_owner_id": post_owner_id,
+            "created_at": created_at
         })
 
         return jsonify({'message': 'Post liked'}), 201
@@ -109,45 +116,172 @@ def comment_post():
     if not payload:
         return jsonify({'error': 'Invalid or missing token'}), 401
 
-    if not post_id or not comment:
-        return jsonify({'error': 'Missing post_id or comment'}), 400
-    
-    data=request.json()
-    post_id = request.json.get('post_id')
-    comment = request.json.get('comment')
-    parent_comment_id = data.get('parent_comment_id')  
-    if not post_id or not comment:
-        return jsonify({'error': 'Missing post_id or comment'}), 400
+    data=request.get_json()
+    post_id = data.get('post_id')
+    comment_text = data.get('comment')
+    parent_comment_id = data.get('parent_comment_id') 
 
-    # Determine who is being replied to
+    if not post_id or not comment_text:
+        return jsonify({'error': 'Missing post_id or comment'}), 400 
+    
+    # Get post owner info
+    post_resp = supabase.table("post").select("user_id").eq("id", post_id).single().execute()
+    if not post_resp.data:
+        return jsonify({"error": "Post not found"}), 404 
+    post_owner_id = post_resp.data["user_id"]
+
+    # if this is a reply, get parent info
+    reply_to_username = None 
+    reply_to_user_id=None
     if parent_comment_id:
         parent_resp = supabase.table("comments").select("user_id").eq("id", parent_comment_id).single().execute()
         if parent_resp.data:
+            #get the target person to reply to through parent comment data saved
             reply_to_user_id = parent_resp.data["user_id"]
+            reply_to_username = parent_resp.data["username"]
 
     # Insert comment (with optional reply info)
-    supabase.table("comments").insert({
+    result = supabase.table("comments").insert({
         "post_id": post_id,
         "user_id": payload['user_id'],
         "username": payload['username'],
-        "comment": comment,
+        "comment_text": comment_text,
         "parent_comment_id": parent_comment_id,
-        "reply_to_user_id": reply_to_user_id
+        "reply_to_user_id": reply_to_user_id,
+        "reply_to_username": reply_to_username
     }).execute()
 
-    # Send notification to RabbitMQ
-    # Send notification to parent commenter (if applicable)
-    if reply_to_user_id and reply_to_user_id != payload['user_id']:
-        publish_notification("reply_comment", {
-            "post_id": post_id,
-            "parent_comment_id": parent_comment_id,
-            "replied_by_user_id": payload["user_id"],
-            "replied_by_username": payload["username"],
-            "replied_to_user_id": reply_to_user_id,
-            "comment": comment
-        })
+    created_at = result.data[0]['created_at'] if result.data else datetime.now().isoformat()
 
-    return jsonify({'message': 'Comment added'}), 201
+    if not result.data or len(result.data) == 0:
+        return jsonify({'error': 'Failed to insert comment'}), 500
+
+    comment_id = result.data[0]['id']
+
+    if parent_comment_id:
+        # This is a reply to a comment
+        if reply_to_user_id and reply_to_user_id != payload['user_id']:
+            # Notify the person being replied to
+            publish_notification("comment_reply", {
+                "recipient_id": reply_to_user_id,
+                "post_id": post_id,
+                "comment_id": comment_id,
+                "comment_text": comment_text,
+                "parent_comment_id": parent_comment_id,
+                "replier_username": payload['username'],
+                "replier_id": payload["user_id"],
+                "created_at": created_at
+            })
+    else:
+        # This is a new comment on the post
+        if post_owner_id != payload['user_id']:
+            # Notify the post owner
+            publish_notification("new_comment", {
+                "recipient_id": post_owner_id,
+                "post_id": post_id,
+                "comment_id": comment_id,
+                "comment_text": comment_text,
+                "commenter_username": payload['username'],
+                "commenter_id": payload['user_id'],
+                "created_at": created_at
+            })
+
+    return jsonify({
+        'message': 'Comment added successfully',
+        'comment': result.data[0]
+    }), 201
+
+# get likes for the post
+@app.route('/api/social/likes/<post_id>', methods=['GET'])
+def get_likes(post_id):
+    token = request.headers.get('Authorization', '').split(' ')[-1]
+    payload = verify_token(token)
+    if not payload:
+        return jsonify({'error': 'Invalid or missing token'}), 401
+
+    try:
+        # Get all likes for the post
+        likes = supabase.table("likes") \
+            .select("*") \
+            .eq("post_id", post_id) \
+            .execute()
+
+        # Get if current user has liked the post
+        user_like = supabase.table("likes") \
+            .select("*") \
+            .eq("post_id", post_id) \
+            .eq("liked_by_user_id", payload['user_id']) \
+            .single() \
+            .execute()
+
+        return jsonify({
+            'likes': likes.data,
+            'total_likes': len(likes.data),
+            'has_liked': bool(user_like.data)
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# get all the comments under the post
+@app.route('/api/social/comments/<post_id>', methods=['GET'])
+def get_comments(post_id):
+    token = request.headers.get('Authorization', '').split(' ')[-1]
+    payload = verify_token(token)
+    if not payload:
+        return jsonify({'error': 'Invalid or missing token'}), 401
+
+    try:
+        # Get all comments for the post
+        comments = supabase.table("comments") \
+            .select("*") \
+            .eq("post_id", post_id) \
+            .order("created_at", desc=False) \
+            .execute()
+
+        # Organize comments into a simplified structure
+        # One parent comment (original) with all replies at one level
+        structured_comments = []
+        replies_map = {}
+
+        for comment in comments.data:
+            if comment['parent_comment_id'] is None:
+                # This is an original comment
+                comment['replies'] = []
+                structured_comments.append(comment)
+                replies_map[comment['id']] = comment['replies']
+            else:
+                # This is a reply - add it to the parent's replies
+                # If replying to a reply, we'll still put it at the same level
+                # Find the original parent comment
+                original_parent_id = find_original_parent(comments.data, comment['parent_comment_id'])
+                if original_parent_id in replies_map:
+                    # Add mention of who they're replying to if it's a reply to a reply
+                    if comment['parent_comment_id'] != original_parent_id:
+                        replied_to = next((c for c in comments.data if c['id'] == comment['parent_comment_id']), None)
+                        if replied_to:
+                            comment['comment'] = f"@{replied_to['username']} {comment['comment']}"
+                    replies_map[original_parent_id].append(comment)
+
+        # Sort replies by timestamp for each parent comment
+        for comment in structured_comments:
+            comment['replies'].sort(key=lambda x: x['created_at'])
+
+        return jsonify({
+            'comments': structured_comments
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def find_original_parent(comments, reply_id):
+    """
+    Recursively find the original parent comment ID
+    """
+    comment = next((c for c in comments if c['id'] == reply_id), None)
+    if not comment or comment['parent_comment_id'] is None:
+        return reply_id
+    return find_original_parent(comments, comment['parent_comment_id'])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5003)

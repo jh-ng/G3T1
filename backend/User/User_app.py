@@ -155,8 +155,8 @@ def update_user(user_id):
             return jsonify({"error": "User not found"}), 404
         
         data["updated_at"] = datetime.now().isoformat()
-        if "user_id" in data:
-            del data["user_id"]
+        if "userId" in data:
+            del data["userId"]
             
         result = supabase.table(USER_TABLE).update(data).eq("userId", user_id).execute()
         

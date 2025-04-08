@@ -68,6 +68,9 @@ def create_post():
     # Get form data
     title = request.form.get('title')
     content = request.form.get('content')
+    location = request.form.get('location')
+    preferences = request.form.get('preferences')  # Might be comma-separated
+
     
     if not all([title, content]):
         return jsonify({'error': 'Missing required fields'}), 400
@@ -88,6 +91,8 @@ def create_post():
             'username': payload['username'],
             'title': title,
             'content': content,
+            'location': location,
+            'preferences': preferences,
             'image_url': image_url,
             'created_at': datetime.now().isoformat()
         }
