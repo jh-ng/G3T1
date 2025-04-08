@@ -59,7 +59,7 @@ export default {
           this.$router.push('/user-preferences');
         } else {
           // Redirect to home page for returning users
-          this.$router.push('/');
+          this.$router.push('/home');
         }
       } catch (err) {
         this.error = err.response?.data?.message || 'Login failed. Please try again.';

@@ -147,7 +147,7 @@ export default {
       this.notifications = [];
       this.unreadCount = 0;
       this.notificationDrawer = false;
-      this.$router.push('/login');
+      this.$router.push('/');
     }
   }
 };

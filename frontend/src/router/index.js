@@ -7,12 +7,12 @@ import LandingView from '@/views/LandingView.vue'
 
 const routes = [
   {
-    path: '/landing',
+    path: '/',
     name: 'Landing',
     component: LandingView,
   },
   {
-    path: '/',
+    path: '/home',
     name: 'Home',
     component: HomePage
   },
@@ -86,7 +86,7 @@ router.beforeEach(async (to, from, next) => {
     next('/login');
   } else if (to.meta.requiresGuest && isAuthenticated) {
     // Already authenticated, redirect from guest pages
-    next('/');
+    next('/home');
   } else if (isAuthenticated) {
     // Check for first login flow
     const isFirstLogin = authService.isFirstLogin();
