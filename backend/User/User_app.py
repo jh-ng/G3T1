@@ -59,19 +59,14 @@ def token_required(f):
     return decorated
 
 # This endpoint is called by the auth service through Kong
-@app.route('/api/user', methods=['POST'])
+@app.route('/api/users/create', methods=['POST'])
+@token_required
 def create_user():
     data = request.get_json()
+    required_fields = ['user_id', 'username']
     
-    # Check for mandatory fields
-    if "userId" not in data:
-        return jsonify({"error": "Missing required field: userId"}), 400
-    if "username" not in data:
-        return jsonify({"error": "Missing required field: username"}), 400
-    
-    # Ensure email field exists, even if empty
-    if "email" not in data:
-        data["email"] = ""  # Set default empty string if missing
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
 
     try:
         check_result = supabase.table(USER_TABLE).select("*").eq("userId", data["user_id"]).execute()
@@ -81,11 +76,10 @@ def create_user():
         
         user_data = {
             "userId": data["user_id"],
-            "email": data["email"],
             "username": data["username"],
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
-            "taste_preferences": {}  # Initialize empty taste preferences
+            "taste_preferences": data.get("taste_preferences", {})
         }
         
         result = supabase.table(USER_TABLE).insert(user_data).execute()
