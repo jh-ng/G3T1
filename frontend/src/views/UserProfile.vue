@@ -30,7 +30,19 @@
 
       <v-row v-else>
         <v-col cols="12" v-for="post in posts" :key="post.id">
-          <post :post="post" @like-post="handleLike" @comment-post="handleComment" />
+          <div class="post-container">
+            <post :post="post" @like-post="handleLike" @comment-post="handleComment" />
+            <v-btn
+              v-if="isOwnProfile"
+              icon
+              color="error"
+              size="small"
+              class="delete-post-btn"
+              @click="handleDeletePost(post.id)"
+            >
+              <v-icon>mdi-delete</v-icon>
+            </v-btn>
+          </div>
         </v-col>
       </v-row>
     </v-container>
@@ -98,9 +110,9 @@ export default {
         const currentUser = authService.getCurrentUser();
         if (currentUser && currentUser.id === parseInt(this.userId)) {
           this.userAvatar = currentUser.avatar || defaultAvatar;
-          this.isOwnProfile = true; // Set isOwnProfile to true
+          this.isOwnProfile = true;
         } else {
-            this.isOwnProfile = false;
+          this.isOwnProfile = false;
         }
       } catch (err) {
         this.error = err.message;
@@ -109,6 +121,54 @@ export default {
         }
       } finally {
         this.loading = false;
+      }
+    },
+    async handleDeletePost(postId) {
+      if (!confirm('Are you sure you want to delete this post?')) {
+        return;
+      }
+
+      try {
+        const token = authService.getToken();
+        console.log('Attempting to delete post:', postId);
+        
+        // First, delete all social interactions (likes and comments) through Kong
+        const socialResponse = await fetch(`http://localhost:8000/api/social/posts`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ post_id: postId })
+        });
+
+        if (!socialResponse.ok) {
+          throw new Error('Failed to delete post social data');
+        }
+
+        console.log('Social data deleted successfully, now deleting post...');
+        // Then, delete the post itself through Kong
+        const postResponse = await fetch(`http://localhost:8000/api/posts`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ post_id: postId })
+        });
+
+        if (!postResponse.ok) {
+          const errorData = await postResponse.json();
+          console.error('Server error:', errorData);
+          throw new Error('Failed to delete post');
+        }
+
+        console.log('Post deleted successfully');
+        // Remove the deleted post from the list
+        this.posts = this.posts.filter(post => post.id !== postId);
+      } catch (err) {
+        console.error('Error deleting post:', err);
+        alert('Failed to delete post. Please try again.');
       }
     },
     handleLike(postId) {
@@ -137,5 +197,22 @@ export default {
   display: grid;
   gap: 2rem;
   padding: 2rem 0;
+}
+
+.post-container {
+  position: relative;
+}
+
+.delete-post-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+}
+
+.delete-post-btn:hover {
+  background-color: rgba(255, 255, 255, 0.9);
 }
 </style>

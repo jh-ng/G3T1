@@ -259,40 +259,77 @@ def update_post(post_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/posts/<int:post_id>', methods=['DELETE'])
-def delete_post(post_id):
+@app.route('/api/posts', methods=['DELETE'])
+def delete_post():
+    print("\n=== Starting delete_post request ===")
+    print("Headers:", dict(request.headers))
+    print("Request data:", request.get_data(as_text=True))
+    
     # Verify JWT token
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
+        print("No token provided")
         return jsonify({'error': 'No token provided'}), 401
     
     token = auth_header.split(' ')[1]
     payload = verify_token(token)
+    print("JWT Payload:", payload)
     
     if not payload:
+        print("Invalid or expired token")
         return jsonify({'error': 'Invalid or expired token'}), 401
 
+    # Get post_id from request body
     try:
+        data = request.get_json()
+        print("Parsed request body:", data)
+        if not data or 'post_id' not in data:
+            print("Missing post_id in request body")
+            return jsonify({'error': 'Missing post_id in request body'}), 400
+        
+        post_id = data['post_id']
+        print(f"Attempting to delete post {post_id}")
+
         # First, get the post to check ownership
+        print("Fetching post from Supabase...")
         post_response = supabase.table(POSTS_TABLE).select('*').eq('id', post_id).execute()
+        print("Post response data:", post_response.data)
         
         if not post_response.data:
+            print(f"Post {post_id} not found")
             return jsonify({'error': 'Post not found'}), 404
         
         post = post_response.data[0]
+        print(f"Post data: {post}")
+        print(f"Post owner ID: {post.get('user_id')} (type: {type(post.get('user_id'))})")
+        print(f"Current user ID: {payload.get('user_id')} (type: {type(payload.get('user_id'))})")
         
-        # Check if the user is the owner of the post
-        if post['user_id'] != payload['user_id']:
-            return jsonify({'error': 'Unauthorized to delete this post'}), 403
-        
-        # Delete the post from Supabase
-        supabase.table(POSTS_TABLE).delete().eq('id', post_id).execute()
-        
-        return jsonify({
-            'message': 'Post deleted successfully'
-        }), 200
+        # Check if the user is the owner of the post (convert both to integers for comparison)
+        try:
+            post_owner_id = int(str(post.get('user_id')))
+            current_user_id = int(str(payload.get('user_id')))
+            print(f"Comparing post owner ID {post_owner_id} with current user ID {current_user_id}")
+            
+            if str(post.get('user_id')) != str(payload.get('user_id')):
+                print("User is not authorized to delete this post")
+                return jsonify({'error': 'Unauthorized to delete this post'}), 403
+            
+            # Delete the post from Supabase
+            print("Deleting post from Supabase...")
+            supabase.table(POSTS_TABLE).delete().eq('id', post_id).execute()
+            print("Post deleted successfully")
+            
+            return jsonify({
+                'message': 'Post deleted successfully'
+            }), 200
+        except (ValueError, TypeError) as e:
+            print(f"Error converting user IDs: {str(e)}")
+            return jsonify({'error': 'Error comparing user IDs'}), 500
         
     except Exception as e:
+        print(f"Error in delete_post: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
