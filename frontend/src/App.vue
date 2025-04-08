@@ -1,10 +1,7 @@
 <template>
   <v-app style="height: 100vh; width: 100vw">
     <v-app-bar color="primary">
-      <v-app-bar-nav-icon
-        variant="text"
-        @click.stop="drawer = !drawer"
-      ></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon variant="text" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
 
       <v-toolbar-title>Travel Planner</v-toolbar-title>
 
@@ -17,13 +14,18 @@
       <template v-else>
         <span class="mr-4">Welcome, {{ currentUser?.username }}</span>
         <v-btn @click="handleLogout" variant="text">Logout</v-btn>
+        <!-- Notification Bell Only -->
+        <v-btn icon variant="text" @click="toggleNotificationPanel" class="notification-bell">
+          <v-badge :content="unreadCount" :model-value="unreadCount > 0" color="error">
+            <v-icon>mdi-bell</v-icon>
+          </v-badge>
+        </v-btn>
       </template>
     </v-app-bar>
-    <v-navigation-drawer
-      v-model="drawer"
-      temporary
-      style="height: 100vh; display: flex; flex-direction: column"
-    >
+
+
+    <!-- Navigation Drawer -->
+    <v-navigation-drawer v-model="drawer" temporary style="height: 100vh; display: flex; flex-direction: column">
       <v-list>
         <v-list-item to="/" title="Home"></v-list-item>
         <v-list-item to="/travel-planner" title="Travel Planner"></v-list-item>
@@ -38,6 +40,10 @@
         <v-btn rounded block color="primary" to="/create-post">Create Post</v-btn>
       </div>
     </v-navigation-drawer>
+
+    <!-- Notification Drawer Component -->
+    <NotificationDrawer v-if="isAuthenticated" :show="notificationDrawer" @close="notificationDrawer = false" />
+
     <v-main>
       <router-view></router-view>
     </v-main>
@@ -46,14 +52,23 @@
 
 <script>
 import authService from './services/auth';
+import notificationService from '@/services/notificationService';
+import config from '@/services/config';
+import NotificationDrawer from './components/NotificationDrawer.vue';
+
 
 export default {
   name: "App",
+  components: {
+    NotificationDrawer
+  },
   data() {
     return {
       drawer: false,
       isAuthenticated: false,
-      currentUser: null
+      currentUser: null,
+      notificationDrawer: false
+
     }
   },
   created() {
@@ -61,10 +76,23 @@ export default {
     // Add event listener for storage changes
     window.addEventListener('storage', this.checkAuth);
   },
+  mounted() {
+
+    this.startNotificationPolling();
+
+  },
   beforeUnmount() {
     // Remove event listener
     window.removeEventListener('storage', this.checkAuth);
+
+    this.stopNotificationPolling();
   },
+  computed: {
+    unreadCount() {
+      return notificationService.unreadCount.value;
+    },
+  },
+
   methods: {
     async checkAuth() {
       this.isAuthenticated = authService.isAuthenticated();
@@ -78,15 +106,36 @@ export default {
         const isValid = await authService.verifyToken();
         if (!isValid) {
           this.handleLogout();
+
+        } else {
+          // Initialize notification service with current user ID
+          notificationService.initialize(this.currentUser.id);
         }
       } else {
         this.currentUser = null;
       }
+    }, toggleNotificationPanel() {
+      this.notificationDrawer = !this.notificationDrawer;
     },
+    startNotificationPolling() {
+      this.notificationPollingInterval = setInterval(() => {
+        if (this.isAuthenticated && this.currentUser) {
+          notificationService.fetchNotifications();
+        }
+      }, config.notifications.pollingInterval);
+    },
+    stopNotificationPolling() {
+      if (this.notificationPollingInterval) clearInterval(this.notificationPollingInterval);
+    },
+
+
     handleLogout() {
       authService.logout();
       this.isAuthenticated = false;
       this.currentUser = null;
+      this.notifications = [];
+      this.unreadCount = 0;
+      this.notificationDrawer = false;
       this.$router.push('/login');
     }
   }
@@ -100,6 +149,15 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
+}
+
+.unread-notification {
+  background-color: #f5f5f5;
+  border-left: 4px solid var(--v-primary-base);
+}
+
+.notification-bell {
+  position: relative;
 }
 
 .navbar {

@@ -64,6 +64,15 @@ services:
       - "5002:5002"
     networks:
       - kong-net
+  rabbitmq-listener:
+    build:
+      context: ./backend/RabbitMQListener
+      dockerfile: Dockerfile
+    restart: always
+    env_file: ./backend/RabbitMQListener/.env
+    networks:
+      - kong-net
+
 
   location-service:
     build:
@@ -84,12 +93,16 @@ services:
       - ./backend/ai-microservice/.env
     environment:
       - PLACES_MICROSERVICE_URL=http://location-service:4500
+      - USER_SERVICE_URL=http://user-service:5002
+      - JWT_SECRET=esd_jwt_secret_key
+      - JWT_ALGORITHM=HS256
     ports:
       - "3000:3000"
     networks:
       - kong-net
     depends_on:
       - location-service
+      - user-service
 
   itinerary-service:
     build:
@@ -117,6 +130,23 @@ services:
       - "5003:5003"
     networks:
       - kong-net
+
+  create-post-service:
+    build: 
+      context: ./backend/create
+      dockerfile: Dockerfile
+    environment:
+      - JWT_SECRET=esd_jwt_secret_key
+      - JWT_ALGORITHM=HS256
+      - PREFERENCES_SERVICE_URL=http://user-service:5002 
+      - POST_SERVICE_URL=http://post-service:5000
+    depends_on:
+      - user-service
+    ports:
+      - "5005:5005"
+    networks:
+      - kong-net
+
 
 networks:
   kong-net:
