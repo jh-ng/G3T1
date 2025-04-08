@@ -188,7 +188,7 @@ export default {
         }
 
         const response = await fetch(
-          `http://localhost:5005/api/user/taste-preferences`,
+          `http://localhost:8000/api/user/taste-preferences`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -290,7 +290,7 @@ export default {
           formData.append("image", this.image);
         }
 
-        const response = await fetch("http://localhost:5005/api/posts", {
+        const response = await fetch("http://localhost:8000/api/cposts", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,

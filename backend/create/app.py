@@ -75,7 +75,7 @@ def get_preferences():
         return jsonify({'error': 'Could not retrieve preferences'}), 500
     return jsonify({'taste_preferences': preferences})
 
-@app.route('/api/posts', methods=['POST'])
+@app.route('/api/cposts', methods=['POST'])
 def create_post():
     logging.info("Received create post request")
     # Auth check - this part works fine based on your logs
