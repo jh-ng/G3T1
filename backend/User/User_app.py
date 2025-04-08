@@ -131,6 +131,42 @@ def get_taste_preferences(user_id):
         logger.error(f"Error fetching taste preferences: {str(e)}")
         return jsonify({"error": f"Error fetching taste preferences: {str(e)}"}), 500
 
+@app.route("/api/user/<user_id>/taste-preferences", methods=["PUT"])
+@token_required
+def update_taste_preferences(user_id):
+    # Check if the user is updating their own taste preferences
+    if user_id != str(request.user["user_id"]):
+        return jsonify({"error": "Unauthorized access"}), 403
+    
+    data = request.json
+    if not data:
+        return jsonify({"error": "No preferences data provided"}), 400
+    
+    try:
+        check_result = supabase.table(USER_TABLE).select("*").eq("userId", user_id).execute()
+        
+        if len(check_result.data) == 0:
+            return jsonify({"error": "User not found"}), 404
+        
+        update_data = {
+            "updated_at": datetime.now().isoformat(),
+            "taste_preferences": data
+        }
+            
+        result = supabase.table(USER_TABLE).update(update_data).eq("userId", user_id).execute()
+        
+        if len(result.data) == 0:
+            return jsonify({"error": "Failed to update preferences"}), 500
+            
+        return jsonify({
+            "message": "Preferences updated successfully",
+            "taste_preferences": result.data[0]["taste_preferences"]
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error updating taste preferences: {str(e)}")
+        return jsonify({"error": f"Error updating taste preferences: {str(e)}"}), 500
+
 @app.route("/api/user/<user_id>", methods=["PUT"])
 @token_required
 def update_user(user_id):
