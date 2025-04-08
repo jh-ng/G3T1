@@ -35,14 +35,16 @@ services:
   - name: post-service
     url: http://post-service:5000
     routes:
-      - name: post-create
+      - name: post-routes
         paths:
           - /api/posts
         strip_path: false
-      - name: post-list
-        paths:
-          - /api/posts
-        strip_path: false
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
       - name: user-posts
         paths:
           - /api/posts/user/
@@ -134,6 +136,7 @@ services:
         methods:
           - GET
           - POST
+          - DELETE
           - OPTIONS
 
 plugins:
