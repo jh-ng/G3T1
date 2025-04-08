@@ -231,7 +231,7 @@
             await authService.createUserProfile(this.form);
             // Update first login status.
             await authService.updateFirstLoginStatus();
-            this.$router.push('/');
+            this.$router.push('/home');
           } catch (error) {
             console.error('Error submitting preferences:', error);
             alert(error.message || 'Failed to create user profile. Please try again.');

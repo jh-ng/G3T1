@@ -112,13 +112,11 @@ class AuthService {
     }
   }
 
-  // Add method to check if it's the user's first login
   isFirstLogin() {
     const user = this.getCurrentUser();
     return user ? user.is_first_login : false;
   }
 
-  // Get information from the JWT token
   getTokenInfo() {
     const token = this.getToken();
     if (!token) return null;
@@ -136,7 +134,6 @@ class AuthService {
     }
   }
 
-  // Add method to verify token validity
   async verifyToken() {
     try {
       const response = await axios.get(`${API_URL}/verify-token`);
@@ -149,67 +146,42 @@ class AuthService {
     }
   }
 
-  // Add method to update first login status
   async updateFirstLoginStatus() {
     try {
-      console.log('[DEBUG] Starting updateFirstLoginStatus');
-      console.log('[DEBUG] Current token:', this.getToken());
-      console.log('[DEBUG] Current user from localStorage:', this.getCurrentUser());
-      
-      // Get token info to verify what's in the JWT
-      const tokenInfo = this.getTokenInfo();
-      console.log('[DEBUG] Token payload:', tokenInfo);
-      
       const response = await axios.post(`${API_URL}/update-first-login`);
-      console.log('[DEBUG] API response:', response.data);
       
       if (response.data) {
-        // Update the user in localStorage
         const user = this.getCurrentUser();
-        console.log('[DEBUG] User before update:', user);
-        
         if (user) {
           user.is_first_login = false;
           localStorage.setItem('user', JSON.stringify(user));
-          console.log('[DEBUG] User after update:', this.getCurrentUser());
-        } else {
-          console.log('[DEBUG] No user found in localStorage to update');
         }
       }
       
       return response.data;
     } catch (error) {
-      console.error('[DEBUG] Error updating first login status:', error);
-      console.error('[DEBUG] Error response:', error.response?.data);
+      console.error('Error updating first login status:', error);
       return false;
     }
   }
 
-  // Add method to create user profile
   async createUserProfile(preferences) {
     try {
       if (!preferences || Object.keys(preferences).length === 0) {
         throw new Error('No preferences provided');
       }
 
-      // First get user data from verify-token endpoint
       const verifyResponse = await axios.get(`${API_URL}/verify-token`);
-      console.log('Token verification response:', verifyResponse.data);
-
       if (!verifyResponse.data || !verifyResponse.data.user) {
         throw new Error('Could not verify user token');
       }
 
-      // Get current stored data
       const stored = this.getCurrentUser();
       if (!stored) {
         throw new Error('Please log in again');
       }
 
-      // Get verified user data
       const verifiedUser = verifyResponse.data.user;
-
-      // Update stored user data with verified data
       const updatedUser = {
         ...stored,
         email: verifiedUser.email,
@@ -217,33 +189,22 @@ class AuthService {
         username: verifiedUser.username || stored.username
       };
 
-      // Store updated user data
       localStorage.setItem('user', JSON.stringify(updatedUser));
-      console.log('Updated stored user data:', updatedUser);
 
-      // Prepare data for user creation - no email needed
       const createData = {
         user_id: updatedUser.id,
         username: updatedUser.username,
         taste_preferences: preferences
       };
 
-      console.log('Data for user creation:', createData);
-
-      // Validate required fields
       const missing = [];
       if (!createData.user_id) missing.push('user_id');
       if (!createData.username) missing.push('username');
       if (missing.length > 0) {
-        console.error('Missing required fields:', missing);
         throw new Error(`Missing required fields: ${missing.join(', ')}`);
       }
 
-      // Create user through User microservice
       const response = await axios.post(`${USER_API_URL}/users/create`, createData);
-      console.log('User creation response:', response.data);
-
-      // Validate response
       if (!response.data) {
         throw new Error('Empty response from user service');
       }
@@ -252,18 +213,8 @@ class AuthService {
         throw new Error(`User service error: ${response.data.error}`);
       }
 
-      // Return successful response
       return response.data;
     } catch (error) {
-      // Log detailed error information
-      console.error('Error in createUserProfile:', {
-        error: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        user: this.getCurrentUser()
-      });
-
-      // Re-throw with more specific message
       if (error.response?.status === 401) {
         throw new Error('Authentication failed. Please log in again.');
       } else if (error.response?.status === 400) {
@@ -271,6 +222,36 @@ class AuthService {
       } else {
         throw new Error('Failed to create user profile: ' + error.message);
       }
+    }
+  }
+
+  async getUserPreferences() {
+    try {
+      const tokenInfo = this.getTokenInfo();
+      if (!tokenInfo || !tokenInfo.user_id) {
+        throw new Error('Invalid token or user ID not found');
+      }
+
+      const response = await axios.get(`${USER_API_URL}/user/${tokenInfo.user_id}/taste-preferences`);
+      return response.data.taste_preferences;
+    } catch (error) {
+      console.error('Error getting user preferences:', error);
+      throw error;
+    }
+  }
+
+  async updateUserProfile(preferences) {
+    try {
+      const tokenInfo = this.getTokenInfo();
+      if (!tokenInfo || !tokenInfo.user_id) {
+        throw new Error('Invalid token or user ID not found');
+      }
+
+      const response = await axios.put(`${USER_API_URL}/user/${tokenInfo.user_id}/taste-preferences`, preferences);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw error;
     }
   }
 }
