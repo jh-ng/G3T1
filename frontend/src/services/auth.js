@@ -250,8 +250,14 @@ class AuthService {
       const response = await axios.put(`${USER_API_URL}/user/${tokenInfo.user_id}/taste-preferences`, preferences);
       return response.data;
     } catch (error) {
-      console.error('Error updating user profile:', error);
-      throw error;
+      if (error.response?.status === 401) {
+        throw new Error('Authentication failed. Please log in again.');
+      } else if (error.response?.status === 400) {
+        throw new Error('Invalid preferences data provided.');
+      } else {
+        console.error('Error updating preferences:', error);
+        throw new Error('Failed to update preferences. Please try again.');
+      }
     }
   }
 }

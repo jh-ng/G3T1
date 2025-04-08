@@ -29,7 +29,7 @@
     <!-- Navigation Drawer -->
     <v-navigation-drawer v-model="drawer" temporary style="height: 100vh; display: flex; flex-direction: column">
       <v-list>
-        <v-list-item to="/" title="Home"></v-list-item>
+        <v-list-item to="/home" title="Home"></v-list-item>
         <v-list-item to="/travel-planner" title="Travel Planner"></v-list-item>
         <v-list-item to="/saved-itineraries" prepend-icon="mdi-book-open-variant">
           Saved Itineraries
