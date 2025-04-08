@@ -119,23 +119,66 @@ def create_post():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# @app.route('/api/posts', methods=['GET'])
+# def get_posts():
+#     auth_header = request.headers.get('Authorization')
+#     if not auth_header or not auth_header.startswith('Bearer '):
+#         return jsonify({'error': 'No token provided'}), 401
+    
+#     token = auth_header.split(' ')[1]
+#     payload = verify_token(token)
+    
+#     if not payload:
+#         return jsonify({'error': 'Invalid or expired token'}), 401
+    
+#     try:
+#         # Query posts from Supabase
+#         response = supabase.table(POSTS_TABLE).select('*').order('created_at', desc=True).execute()
+        
+#         posts = response.data
+        
+#         return jsonify({
+#             'posts': [{
+#                 'id': post['id'],
+#                 'title': post['title'],
+#                 'content': post['content'],
+#                 'image_url': post['image_url'],
+#                 'created_at': post['created_at'],
+#                 'user_id': post['user_id'],
+#                 'username': post['username'],
+#                 'preference': [tag.strip() for tag in (post['preferences'] or '').split(',') if tag],
+#                 'location': post['location']
+#             } for post in posts]
+#         }), 200
+        
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
+    
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
     auth_header = request.headers.get('Authorization')
     if not auth_header or not auth_header.startswith('Bearer '):
         return jsonify({'error': 'No token provided'}), 401
-    
     token = auth_header.split(' ')[1]
     payload = verify_token(token)
-    
     if not payload:
         return jsonify({'error': 'Invalid or expired token'}), 401
-    
     try:
-        # Query posts from Supabase
+        # Fetch all posts first
         response = supabase.table(POSTS_TABLE).select('*').order('created_at', desc=True).execute()
-        
         posts = response.data
+        
+        # Filter in Python instead of SQL if tags are provided
+        tags_param = request.args.get('tags')
+        if tags_param:
+            tags = [tag.strip().lower() for tag in tags_param.split(',') if tag.strip()]
+            filtered_posts = []
+            for post in posts:
+                # Handle case where preferences might be None
+                preferences = (post.get('preferences') or '').lower()
+                if any(tag in preferences for tag in tags):
+                    filtered_posts.append(post)
+            posts = filtered_posts
         
         return jsonify({
             'posts': [{
@@ -146,13 +189,13 @@ def get_posts():
                 'created_at': post['created_at'],
                 'user_id': post['user_id'],
                 'username': post['username'],
-                'preference': [tag.strip() for tag in (post['preferences'] or '').split(',') if tag],
+                'preference': [tag.strip() for tag in (post.get('preferences') or '').split(',') if tag],
                 'location': post['location']
             } for post in posts]
         }), 200
-        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/posts/user/<int:user_id>', methods=['GET'])
 def get_user_posts(user_id):
