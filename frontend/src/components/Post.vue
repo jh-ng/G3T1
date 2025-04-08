@@ -8,26 +8,33 @@
     </div>
 
     <!-- Post Image -->
-    <img v-if="post.image_url" :src="post.image_url" alt="Post Image" class="post-image" />
+    <img
+      v-if="post.image_url"
+      :src="post.image_url"
+      alt="Post Image"
+      class="post-image"
+    />
 
     <!-- Post Actions -->
     <div class="post-actions">
-      <button @click="handleLike" class="action-button" :class="{ 'liked': hasLiked }">
-        <font-awesome-icon 
+      <button
+        @click="handleLike"
+        class="action-button"
+        :class="{ liked: hasLiked }"
+      >
+        <font-awesome-icon
           :icon="hasLiked ? ['fas', 'heart'] : ['far', 'heart']"
           :class="{ 'text-red-500': hasLiked }"
         />
       </button>
       <button @click="openComments" class="action-button">
-        <font-awesome-icon 
-          :icon="['far', 'comment']"
-        />
+        <font-awesome-icon :icon="['far', 'comment']" />
       </button>
     </div>
 
     <!-- Likes Count -->
     <div class="likes-count text-left" v-if="likesCount > 0">
-      {{ likesCount }} {{ likesCount === 1 ? 'like' : 'likes' }}
+      {{ likesCount }} {{ likesCount === 1 ? "like" : "likes" }}
     </div>
 
     <!-- Post Content -->
@@ -36,21 +43,48 @@
       <span class="post-text">{{ post.title }}</span>
     </div>
 
+    <!-- Tags -->
+    <div
+      v-if="post.preference && post.preference.length"
+      class="post-tags px-4 mb-2"
+    >
+      <span
+        v-for="(tag, index) in post.preference"
+        :key="index"
+        class="tag text-blue-500 font-semibold mr-2"
+      >
+        #{{ tag }}
+      </span>
+    </div>
+
+    <!-- Location -->
+    <div
+      v-if="post.location"
+      class="post-location px-4 mb-2 text-gray-500 text-sm"
+    >
+      📍 {{ simplifiedLocation }}
+    </div>
+
     <!-- View Comments Link -->
-    <button v-if="commentsCount > 0" @click="openComments" class="view-comments-link">
-      View all {{ commentsCount }} {{ commentsCount === 1 ? 'comment' : 'comments' }}
+    <button
+      v-if="commentsCount > 0"
+      @click="openComments"
+      class="view-comments-link"
+    >
+      View all {{ commentsCount }}
+      {{ commentsCount === 1 ? "comment" : "comments" }}
     </button>
 
     <!-- Comment Input -->
     <div class="comment-input-container">
-      <input 
+      <input
         v-model="newComment"
         placeholder="Add a comment..."
         @keyup.enter="handleSubmit"
         class="comment-input"
       />
-      <button 
-        @click="handleSubmit" 
+      <button
+        @click="handleSubmit"
         class="post-comment-button"
         :disabled="!newComment.trim() || isSubmitting"
       >
@@ -64,7 +98,12 @@
         <div class="dialog-content">
           <!-- Left side - Image -->
           <div class="dialog-image-container">
-            <img v-if="post.image_url" :src="post.image_url" alt="Post Image" class="dialog-image" />
+            <img
+              v-if="post.image_url"
+              :src="post.image_url"
+              alt="Post Image"
+              class="dialog-image"
+            />
           </div>
 
           <!-- Right side - Comments -->
@@ -87,33 +126,65 @@
               </div>
 
               <!-- Comments -->
-              <div v-for="comment in comments" :key="comment.id" class="comment-thread">
+              <div
+                v-for="comment in comments"
+                :key="comment.id"
+                class="comment-thread"
+              >
                 <!-- Parent Comment -->
                 <div class="parent-comment">
-                  <router-link :to="'/user/' + comment.user_id" class="username">
+                  <router-link
+                    :to="'/user/' + comment.user_id"
+                    class="username"
+                  >
                     {{ comment.username }}
                   </router-link>
                   <span class="comment-text">{{ comment.comment_text }}</span>
                   <div class="comment-actions">
-                    <span class="comment-time">{{ formatTime(comment.created_at) }}</span>
-                    <button @click="replyToComment(comment)" class="reply-button">Reply</button>
+                    <span class="comment-time">{{
+                      formatTime(comment.created_at)
+                    }}</span>
+                    <button
+                      @click="replyToComment(comment)"
+                      class="reply-button"
+                    >
+                      Reply
+                    </button>
                   </div>
                 </div>
 
                 <!-- Replies -->
-                <div v-if="comment.replies && comment.replies.length > 0" class="replies">
-                  <div v-for="reply in comment.replies" :key="reply.id" class="reply">
+                <div
+                  v-if="comment.replies && comment.replies.length > 0"
+                  class="replies"
+                >
+                  <div
+                    v-for="reply in comment.replies"
+                    :key="reply.id"
+                    class="reply"
+                  >
                     <div class="reply-content">
                       <div>
-                        <router-link :to="'/user/' + reply.user_id" class="username">
+                        <router-link
+                          :to="'/user/' + reply.user_id"
+                          class="username"
+                        >
                           {{ reply.username }}
                         </router-link>
                         <span class="reply-text">
                           <template v-if="reply.reply_to_username">
-                            <router-link :to="'/user/' + reply.reply_to_user_id" class="mention">
+                            <router-link
+                              :to="'/user/' + reply.reply_to_user_id"
+                              class="mention"
+                            >
                               @{{ reply.reply_to_username }}
                             </router-link>
-                            {{ getCommentTextWithoutMention(reply.comment_text, reply.reply_to_username) }}
+                            {{
+                              getCommentTextWithoutMention(
+                                reply.comment_text,
+                                reply.reply_to_username
+                              )
+                            }}
                           </template>
                           <template v-else>
                             {{ reply.comment_text }}
@@ -121,8 +192,15 @@
                         </span>
                       </div>
                       <div class="reply-actions">
-                        <span class="reply-time">{{ formatTime(reply.created_at) }}</span>
-                        <button @click="replyToComment(reply, comment)" class="reply-button">Reply</button>
+                        <span class="reply-time">{{
+                          formatTime(reply.created_at)
+                        }}</span>
+                        <button
+                          @click="replyToComment(reply, comment)"
+                          class="reply-button"
+                        >
+                          Reply
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -132,14 +210,18 @@
 
             <!-- Single Comment Input at Bottom -->
             <div class="dialog-comment-input">
-              <input 
+              <input
                 v-model="newComment"
-                :placeholder="replyingTo ? `Reply to ${replyingTo.username}...` : 'Add a comment...'"
+                :placeholder="
+                  replyingTo
+                    ? `Reply to ${replyingTo.username}...`
+                    : 'Add a comment...'
+                "
                 @keyup.enter="handleSubmit"
                 class="comment-input"
               />
-              <button 
-                @click="handleSubmit" 
+              <button
+                @click="handleSubmit"
                 class="post-comment-button"
                 :disabled="!newComment.trim() || isSubmitting"
               >
@@ -154,82 +236,98 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
-import authService from '@/services/auth';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faHeart, faComment } from '@fortawesome/free-solid-svg-icons'
-import { library } from '@fortawesome/fontawesome-svg-core'
+import { ref, onMounted, computed  } from "vue";
+import authService from "@/services/auth";
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { faHeart, faComment } from "@fortawesome/free-solid-svg-icons";
+import { library } from "@fortawesome/fontawesome-svg-core";
 
-library.add(faHeart, faComment)
+library.add(faHeart, faComment);
 
-
-const API_BASE_URL = 'http://localhost:8000'; // Kong API Gateway URL
+const API_BASE_URL = "http://localhost:8000"; // Kong API Gateway URL
 
 export default {
-  name: 'PostItem',
+  name: "PostItem",
   components: {
-    FontAwesomeIcon
+    FontAwesomeIcon,
   },
   data() {
     return {
       heart: faHeart,
       comment: faComment,
-    }
+    };
   },
   props: {
     post: {
       type: Object,
-      required: true
-    }
+      required: true,
+    },
   },
   setup(props) {
     const hasLiked = ref(false);
     const likesCount = ref(0);
     const commentsCount = ref(0);
     const comments = ref([]);
-    const newComment = ref('');
+    const newComment = ref("");
     const showCommentsDialog = ref(false);
     const replyingTo = ref(null);
     const parentComment = ref(null);
     const isSubmitting = ref(false);
 
+    const simplifiedLocation = computed(() => {
+      if (!props.post.location) return "";
+      const parts = props.post.location.split(",");
+      if (parts.length >= 2) {
+        const place = parts[0].trim();
+        const country = parts[parts.length - 1].trim();
+        return `${place}, ${country}`;
+      }
+      return props.post.location;
+    });
+
     const fetchLikes = async () => {
       try {
         const token = authService.getToken();
-        const response = await fetch(`${API_BASE_URL}/api/social/likes/${props.post.id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
+        const response = await fetch(
+          `${API_BASE_URL}/api/social/likes/${props.post.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        });
-        if (!response.ok) throw new Error('Failed to fetch likes');
+        );
+        if (!response.ok) throw new Error("Failed to fetch likes");
         const data = await response.json();
         hasLiked.value = data.has_liked;
         likesCount.value = data.total_likes;
       } catch (error) {
-        console.error('Error fetching likes:', error);
+        console.error("Error fetching likes:", error);
       }
     };
 
     const fetchComments = async () => {
       try {
         const token = authService.getToken();
-        const response = await fetch(`${API_BASE_URL}/api/social/comments/${props.post.id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
+        const response = await fetch(
+          `${API_BASE_URL}/api/social/comments/${props.post.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        });
-        
+        );
+
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch comments');
+          throw new Error(errorData.error || "Failed to fetch comments");
         }
-        
+
         const data = await response.json();
         comments.value = data.comments || [];
-        
+
         // Calculate total comments including replies
         let totalCount = 0;
-        comments.value.forEach(comment => {
+        comments.value.forEach((comment) => {
           // Count the parent comment
           totalCount++;
           // Add the count of replies if any exist
@@ -237,10 +335,10 @@ export default {
             totalCount += comment.replies.length;
           }
         });
-        
+
         commentsCount.value = totalCount;
       } catch (error) {
-        console.error('Error fetching comments:', error);
+        console.error("Error fetching comments:", error);
         comments.value = [];
         commentsCount.value = 0;
       }
@@ -250,17 +348,17 @@ export default {
       try {
         const token = authService.getToken();
         const response = await fetch(`${API_BASE_URL}/api/social/like`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify({ post_id: props.post.id })
+          body: JSON.stringify({ post_id: props.post.id }),
         });
-        if (!response.ok) throw new Error('Failed to like post');
+        if (!response.ok) throw new Error("Failed to like post");
         await fetchLikes(); // Refresh likes count
       } catch (error) {
-        console.error('Error liking post:', error);
+        console.error("Error liking post:", error);
       }
     };
 
@@ -270,31 +368,31 @@ export default {
       try {
         const token = authService.getToken();
         const response = await fetch(`${API_BASE_URL}/api/social/comment`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             post_id: props.post.id,
             comment: newComment.value,
-            parent_comment_id: replyingTo.value?.id || null
-          })
+            parent_comment_id: replyingTo.value?.id || null,
+          }),
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to post comment');
+          throw new Error(errorData.error || "Failed to post comment");
         }
 
         // Clear input and reset reply state
-        newComment.value = '';
+        newComment.value = "";
         replyingTo.value = null;
-        
+
         // Refresh comments to get updated count
         await fetchComments();
       } catch (error) {
-        console.error('Error posting comment:', error);
+        console.error("Error posting comment:", error);
       }
     };
 
@@ -316,7 +414,7 @@ export default {
       } else if (minutes > 0) {
         return `${minutes}m`;
       } else {
-        return 'now';
+        return "now";
       }
     };
 
@@ -327,7 +425,7 @@ export default {
     const getCommentTextWithoutMention = (text, username) => {
       if (!text || !username) return text;
       // Remove the @username from the beginning of the comment
-      return text.replace(new RegExp(`^@${username}\\s*`), '');
+      return text.replace(new RegExp(`^@${username}\\s*`), "");
     };
 
     const replyToComment = (comment, parent = null) => {
@@ -335,7 +433,7 @@ export default {
       parentComment.value = parent || comment;
       newComment.value = `@${comment.username} `;
       setTimeout(() => {
-        document.querySelector('.dialog-comment-input .comment-input').focus();
+        document.querySelector(".dialog-comment-input .comment-input").focus();
       }, 50);
     };
 
@@ -345,40 +443,43 @@ export default {
       try {
         const token = authService.getToken();
         const response = await fetch(`${API_BASE_URL}/api/social/comment`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             post_id: props.post.id,
-            comment: getCommentTextWithoutMention(newComment.value, replyingTo.value.username),
-            parent_comment_id: parentComment.value.id,    
+            comment: getCommentTextWithoutMention(
+              newComment.value,
+              replyingTo.value.username
+            ),
+            parent_comment_id: parentComment.value.id,
             reply_to_username: replyingTo.value.username,
-            reply_to_user_id: replyingTo.value.user_id
-          })
+            reply_to_user_id: replyingTo.value.user_id,
+          }),
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to post reply');
+          throw new Error(errorData.error || "Failed to post reply");
         }
 
         // Clear input and reset reply state
-        newComment.value = '';
+        newComment.value = "";
         replyingTo.value = null;
         parentComment.value = null;
 
         // Refresh comments to get updated count
         await fetchComments();
       } catch (error) {
-        console.error('Error posting reply:', error);
+        console.error("Error posting reply:", error);
       }
     };
 
     const handleSubmit = async () => {
       if (isSubmitting.value || !newComment.value.trim()) return;
-      
+
       isSubmitting.value = true;
       try {
         if (replyingTo.value) {
@@ -414,9 +515,10 @@ export default {
       displayUsername: props.post.username,
       getCommentTextWithoutMention,
       handleSubmit,
-      isSubmitting
+      isSubmitting,
+      simplifiedLocation,
     };
-  }
+  },
 };
 </script>
 
@@ -491,8 +593,8 @@ export default {
   cursor: pointer;
   font-size: 14px;
   text-align: left;
-  width: 100%; 
-  display: block; 
+  width: 100%;
+  display: block;
 }
 
 .comment-input-container {
@@ -573,7 +675,8 @@ export default {
   margin-bottom: 16px;
 }
 
-.comment-actions, .reply-actions {
+.comment-actions,
+.reply-actions {
   margin-top: 4px;
   font-size: 12px;
   color: #8e8e8e;
@@ -588,14 +691,16 @@ export default {
   margin-left: 8px;
 }
 
-.username, .mention {
+.username,
+.mention {
   color: #262626;
   font-weight: 600;
   text-decoration: none;
   margin-right: 4px;
 }
 
-.username:hover, .mention:hover {
+.username:hover,
+.mention:hover {
   text-decoration: underline;
 }
 
@@ -655,5 +760,11 @@ export default {
   margin-bottom: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid #efefef;
+}
+
+.post-tags .tag {
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 14px;
 }
 </style>
