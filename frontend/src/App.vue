@@ -34,7 +34,7 @@
         <v-list-item to="/saved-itineraries" prepend-icon="mdi-book-open-variant">
           Saved Itineraries
         </v-list-item>
-        <v-list-item to="/user-preference" title="User Preferences"></v-list-item>
+        <v-list-item to="/preferences-editor" title="User Preferences"></v-list-item>
       </v-list>
       <v-divider></v-divider>
       <v-spacer></v-spacer>

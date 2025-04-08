@@ -41,9 +41,9 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/user-preference',
-    name: 'UserPreference',
-    component: () => import('../views/UserPref.vue'),
+    path: '/preferences-editor',
+    name: 'PreferencesEditor',
+    component: () => import('../views/PreferencesEditor.vue'),
     meta: { requiresAuth: true, allowFirstLogin: true }
   },
   {
@@ -91,9 +91,9 @@ router.beforeEach(async (to, from, next) => {
     // Check for first login flow
     const isFirstLogin = authService.isFirstLogin();
     
-    if (isFirstLogin && to.path !== '/user-preference' && !to.meta.allowFirstLogin) {
+    if (isFirstLogin && to.path !== '/preferences-editor' && !to.meta.allowFirstLogin) {
       // First login users should complete preferences before accessing other pages
-      next('/user-preference');
+      next('/preferences-editor');
     } else {
       // Normal navigation
       next();
