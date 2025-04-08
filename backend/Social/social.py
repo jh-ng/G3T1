@@ -299,5 +299,35 @@ def find_original_parent(comments, reply_id):
         print(f"Error in find_original_parent: {str(e)}")
         return reply_id
 
+@app.route('/api/social/posts', methods=['DELETE'])
+def delete_post_social_data():
+    token = request.headers.get('Authorization', '').split(' ')[-1]
+    payload = verify_token(token)
+    if not payload:
+        return jsonify({'error': 'Invalid or missing token'}), 401
+
+    # Get post_id from request body
+    data = request.get_json()
+    if not data or 'post_id' not in data:
+        return jsonify({'error': 'Missing post_id in request body'}), 400
+    
+    post_id = data['post_id']
+
+    try:
+        # Delete all likes for the post
+        supabase.table("likes").delete().eq("post_id", post_id).execute()
+        
+        # Delete all comments for the post
+        supabase.table("comments").delete().eq("post_id", post_id).execute()
+        
+        return jsonify({
+            'message': 'Post social data deleted successfully'
+        }), 200
+        
+    except Exception as e:
+        print(f"Error deleting post social data: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5003)

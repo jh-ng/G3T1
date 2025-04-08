@@ -12,7 +12,9 @@
         <v-btn to="/register" variant="text">Register</v-btn>
       </template>
       <template v-else>
-        <span class="mr-4">Welcome, {{ currentUser?.username }}</span>
+        <router-link :to="`/user/${currentUser?.id}`" class="welcome-link">
+          <span class="mr-4">Welcome, {{ currentUser?.username }}</span>
+        </router-link>
         <v-btn @click="handleLogout" variant="text">Logout</v-btn>
         <!-- Notification Bell Only -->
         <v-btn icon variant="text" @click="toggleNotificationPanel" class="notification-bell">
@@ -67,8 +69,9 @@ export default {
       drawer: false,
       isAuthenticated: false,
       currentUser: null,
-      notificationDrawer: false
-
+      notificationDrawer: false,
+      id: null,
+      username: ''
     }
   },
   created() {
@@ -76,10 +79,17 @@ export default {
     // Add event listener for storage changes
     window.addEventListener('storage', this.checkAuth);
   },
+  watch: {
+    // Watch for route changes to update auth state
+    '$route': {
+      immediate: true,
+      handler() {
+        this.checkAuth();
+      }
+    }
+  },
   mounted() {
-
     this.startNotificationPolling();
-
   },
   beforeUnmount() {
     // Remove event listener
@@ -114,7 +124,8 @@ export default {
       } else {
         this.currentUser = null;
       }
-    }, toggleNotificationPanel() {
+    },
+    toggleNotificationPanel() {
       this.notificationDrawer = !this.notificationDrawer;
     },
     startNotificationPolling() {
@@ -203,5 +214,15 @@ export default {
 .router-link-active {
   color: #4CAF50;
   font-weight: bold;
+}
+
+.welcome-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.welcome-link:hover {
+  opacity: 0.8;
+  cursor: pointer;
 }
 </style>

@@ -7,24 +7,44 @@
       class="mx-auto d-block my-4"
     ></v-progress-circular>
 
-    <v-alert
-      v-if="error"
-      type="error"
-      class="mx-4"
-    >
+    <v-alert v-if="error" type="error" class="mx-4">
       {{ error }}
     </v-alert>
 
     <div v-if="!loading && !error">
+      <v-container class="px-4 pt-4">
+        <v-row align="center" justify="space-between">
+          <v-col cols="12" md="8">
+            <v-select
+              v-model="selectedTags"
+              :items="availableTags"
+              label="Filter by tags"
+              multiple
+              chips
+              clearable
+            ></v-select>
+          </v-col>
+          <v-col cols="12" md="4" class="d-flex justify-end">
+            <v-btn color="primary" @click="applyFilters"> Filter </v-btn>
+            <v-btn
+              color="secondary"
+              @click="removeAllFilters"
+              style="margin-left: 16px"
+              >Reset</v-btn
+            >
+          </v-col>
+        </v-row>
+      </v-container>
+
       <div v-for="post in posts" :key="post.id" class="post-wrapper">
-        <PostItem :post="post" @like-post="handleLike" @comment-post="handleComment" />
+        <PostItem
+          :post="post"
+          @like-post="handleLike"
+          @comment-post="handleComment"
+        />
       </div>
 
-      <v-alert
-        v-if="posts.length === 0"
-        type="info"
-        class="mx-4"
-      >
+      <v-alert v-if="posts.length === 0" type="info" class="mx-4">
         No posts yet. Be the first to create one!
       </v-alert>
     </div>
@@ -45,6 +65,23 @@ export default {
     const posts = ref([]);
     const loading = ref(true);
     const error = ref(null);
+    const selectedTags = ref([]);
+    const availableTags = [
+      "Active",
+      "Cultural",
+      "Family",
+      "Shopping",
+      "Solo",
+      "Nature Sites",
+      "Cultural Sites",
+      "Leisure Attractions",
+      "Sports Activities",
+      "Halal",
+      "Vegetarian",
+      "Kosher",
+      "None",
+      // Add more if needed
+    ];
 
     const fetchPosts = async () => {
       loading.value = true;
@@ -53,35 +90,46 @@ export default {
       try {
         const token = authService.getToken();
         if (!token) {
-          throw new Error('Not authenticated');
+          throw new Error("Not authenticated");
         }
 
         const currentUser = authService.getCurrentUser();
         if (!currentUser) {
-          throw new Error('User data not found');
+          throw new Error("User data not found");
         }
 
-        const response = await fetch('http://localhost:8000/api/posts', {
-          headers: {
-            'Authorization': `Bearer ${token}`
+        const query =
+          selectedTags.value.length > 0
+            ? `?tags=${selectedTags.value.join(",")}`
+            : "";
+
+        const response = await fetch(
+          `http://localhost:8000/api/posts${query}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        });
+        );
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch posts');
+          throw new Error(errorData.error || "Failed to fetch posts");
         }
 
         const data = await response.json();
-        console.log('Posts data:', data.posts);
-        posts.value = data.posts.map(post => ({
+        console.log("Posts data:", data.posts);
+        posts.value = data.posts.map((post) => ({
           ...post,
-          username: post.username || currentUser.username
+          username: post.username || currentUser.username,
         }));
       } catch (err) {
         error.value = err.message;
         console.error("Error fetching posts:", err);
-        if (err.message.includes('Not authenticated') || err.message.includes('User data not found')) {
+        if (
+          err.message.includes("Not authenticated") ||
+          err.message.includes("User data not found")
+        ) {
           authService.logout();
         }
       } finally {
@@ -89,13 +137,22 @@ export default {
       }
     };
 
+    const applyFilters = () => {
+      fetchPosts(selectedTags.value);
+    };
+
+    const removeAllFilters = () => {
+      selectedTags.value = [];
+      fetchPosts();
+    };
+
     const handleLike = (postId) => {
-      console.log('Liking post:', postId);
+      console.log("Liking post:", postId);
       // Implement like functionality
     };
 
     const handleComment = (postId) => {
-      console.log('Commenting on post:', postId);
+      console.log("Commenting on post:", postId);
       // Implement comment functionality
     };
 
@@ -103,12 +160,16 @@ export default {
       fetchPosts();
     });
 
-    return { 
+    return {
       posts,
       loading,
       error,
       handleLike,
-      handleComment
+      handleComment,
+      selectedTags,
+      availableTags,
+      applyFilters,
+      removeAllFilters,
     };
   },
 };
