@@ -145,7 +145,9 @@ def get_posts():
                 'image_url': post['image_url'],
                 'created_at': post['created_at'],
                 'user_id': post['user_id'],
-                'username': post['username']
+                'username': post['username'],
+                'preference': [tag.strip() for tag in (post['preferences'] or '').split(',') if tag],
+                'location': post['location']
             } for post in posts]
         }), 200
         

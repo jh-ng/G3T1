@@ -10,7 +10,16 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 
 
 
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faHeart } from '@fortawesome/free-solid-svg-icons'
+import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons'
+import { faComment } from '@fortawesome/free-regular-svg-icons'
+
+library.add(faHeart, faComment, faHeartRegular)
+
 const app = createApp(App);
 app.use(router); // Use the router
 app.use(vuetify)
+app.component('font-awesome-icon', FontAwesomeIcon);
 app.mount('#app');

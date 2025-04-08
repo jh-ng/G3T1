@@ -49,13 +49,14 @@
             clearable
             class="mb-4"
           />
-          <!-- <v-text-field
-            v-model="location"
-            label="Location"
-            placeholder="e.g., Tokyo, Japan"
-            class="mb-4"
-          /> -->
-          <input v-model="searchQuery" @keydown.enter="searchLocation" placeholder="Search for a place..." />
+          <div class="mb-4">
+            <input
+              v-model="searchQuery"
+              @keydown.enter.prevent="searchLocation"
+              placeholder="Search for a place..."
+              class="search-input"
+            />
+          </div>
           <div class="map-container" ref="myMap"></div>
           <p v-if="selectedLocation">
             Selected: {{ selectedLocation.address }} ({{
@@ -88,7 +89,7 @@
 
 <script>
 import authService from "../services/auth";
-import maplibre from 'maplibre-gl';
+import maplibre from "maplibre-gl";
 
 export default {
   name: "CreatePost",
@@ -107,7 +108,7 @@ export default {
       map: null,
       marker: null,
       selectedLocation: null,
-      searchQuery: '',
+      searchQuery: "",
       myAPIKey: process.env.VUE_APP_GEOAPIFY_API_KEY,
     };
   },
@@ -128,7 +129,7 @@ export default {
     },
   },
   mounted() {
-    const mapStyle = 'https://maps.geoapify.com/v1/styles/osm-carto/style.json';
+    const mapStyle = "https://maps.geoapify.com/v1/styles/osm-carto/style.json";
 
     this.map = new maplibre.Map({
       container: this.$refs.myMap,
@@ -150,14 +151,17 @@ export default {
       );
     }
 
-    this.map.on('click', (e) => {
+    this.map.on("click", (e) => {
       const { lng, lat } = e.lngLat;
 
       (async () => {
-        const res = await fetch(`https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=${this.myAPIKey}`);
+        const res = await fetch(
+          `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=${this.myAPIKey}`
+        );
         const data = await res.json();
 
-        const address = data.features[0]?.properties.formatted || "Unknown location";
+        const address =
+          data.features[0]?.properties.formatted || "Unknown location";
 
         if (this.marker) {
           this.marker.setLngLat([lng, lat]);
@@ -183,11 +187,14 @@ export default {
           return;
         }
 
-        const response = await fetch(`http://localhost:5005/api/user/taste-preferences`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(
+          `http://localhost:5005/api/user/taste-preferences`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Failed to fetch preferences");
@@ -198,13 +205,13 @@ export default {
         // Collect all array values from the taste_preferences object and flatten them
         this.preferences = [];
         for (const key in tastePreferences) {
-          if (key === 'startTime' || key === 'endTime') {
+          if (key === "startTime" || key === "endTime") {
             continue; // Skip 'startTime' and 'endTime'
           }
           const value = tastePreferences[key];
           if (Array.isArray(value)) {
             this.preferences = this.preferences.concat(value);
-          } else if (typeof value === 'string') {
+          } else if (typeof value === "string") {
             this.preferences.push(value);
           }
         }
@@ -218,7 +225,9 @@ export default {
       if (!this.searchQuery) return;
 
       const response = await fetch(
-        `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(this.searchQuery)}&apiKey=${this.myAPIKey}`
+        `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(
+          this.searchQuery
+        )}&apiKey=${this.myAPIKey}`
       );
       const data = await response.json();
 
@@ -232,11 +241,17 @@ export default {
         // Update marker
         if (this.marker) {
           this.marker.setLngLat([lon, lat]);
-          this.marker.setPopup(new maplibre.Popup().setText(feature.properties.formatted)).addTo(this.map);
+          this.marker
+            .setPopup(
+              new maplibre.Popup().setText(feature.properties.formatted)
+            )
+            .addTo(this.map);
         } else {
           this.marker = new maplibre.Marker()
             .setLngLat([lon, lat])
-            .setPopup(new maplibre.Popup().setText(feature.properties.formatted))
+            .setPopup(
+              new maplibre.Popup().setText(feature.properties.formatted)
+            )
             .addTo(this.map);
         }
 
@@ -269,7 +284,7 @@ export default {
           this.selectedPreferences.join(",")
         );
         if (this.selectedLocation?.address) {
-          formData.append('location', this.selectedLocation.address);
+          formData.append("location", this.selectedLocation.address);
         }
         if (this.image) {
           formData.append("image", this.image);
@@ -320,7 +335,7 @@ export default {
 </script>
 
 <style scoped>
-@import '~maplibre-gl/dist/maplibre-gl.css';
+@import "~maplibre-gl/dist/maplibre-gl.css";
 
 .map-container {
   height: 400px;
@@ -331,5 +346,13 @@ export default {
   padding: 2rem;
   max-width: 800px;
   margin: 0 auto;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
 }
 </style>

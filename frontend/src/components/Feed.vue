@@ -17,7 +17,7 @@
 
     <div v-if="!loading && !error">
       <div v-for="post in posts" :key="post.id" class="post-wrapper">
-        <Post :post="post" @like-post="handleLike" @comment-post="handleComment" />
+        <PostItem :post="post" @like-post="handleLike" @comment-post="handleComment" />
       </div>
 
       <v-alert
@@ -33,13 +33,13 @@
 
 <script>
 import { ref, onMounted } from "vue";
-import Post from "@/components/Post.vue";
+import PostItem from "@/components/Post.vue";
 import authService from "@/services/auth";
 
 export default {
   name: "MyFeed",
   components: {
-    Post,
+    PostItem,
   },
   setup() {
     const posts = ref([]);

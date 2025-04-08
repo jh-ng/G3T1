@@ -127,18 +127,12 @@ services:
   - name: social-service
     url: http://social-service:5003
     routes:
-      - name: social-like
+      - name: social-routes
         paths:
-          - /api/social/like
+          - /api/social
         strip_path: false
         methods:
-          - POST
-          - OPTIONS
-      - name: social-comment
-        paths:
-          - /api/social/comment
-        strip_path: false
-        methods:
+          - GET
           - POST
           - OPTIONS
 
