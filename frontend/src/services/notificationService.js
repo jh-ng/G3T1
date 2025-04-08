@@ -9,7 +9,6 @@ class NotificationService {
   error = ref(null);
   currentUserId = ref(null);
 
-  // Computed properties
   unreadCount = computed(() => 
     this.notifications.value.filter(n => !n.IsRead).length
   );
