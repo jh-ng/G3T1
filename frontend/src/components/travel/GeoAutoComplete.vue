@@ -71,7 +71,7 @@ export default {
       this.timeoutId = setTimeout(async () => {
         try {
           // Using the environment variable for the API key
-          const apiKey = process.env.VUE_APP_GEOAPIFY_API_KEY || '77233530582744269b34444605bdadab';
+          const apiKey = process.env.VUE_APP_GEOAPIFY_API_KEY;
           const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(value)}&limit=5&apiKey=${apiKey}`;
           
           const response = await fetch(url);

@@ -116,20 +116,35 @@ class AuthService {
   // Add method to update first login status
   async updateFirstLoginStatus() {
     try {
+      console.log('[DEBUG] Starting updateFirstLoginStatus');
+      console.log('[DEBUG] Current token:', this.getToken());
+      console.log('[DEBUG] Current user from localStorage:', this.getCurrentUser());
+      
+      // Get token info to verify what's in the JWT
+      const tokenInfo = this.getTokenInfo();
+      console.log('[DEBUG] Token payload:', tokenInfo);
+      
       const response = await axios.post(`${API_URL}/update-first-login`);
+      console.log('[DEBUG] API response:', response.data);
       
       if (response.data) {
         // Update the user in localStorage
         const user = this.getCurrentUser();
+        console.log('[DEBUG] User before update:', user);
+        
         if (user) {
           user.is_first_login = false;
           localStorage.setItem('user', JSON.stringify(user));
+          console.log('[DEBUG] User after update:', this.getCurrentUser());
+        } else {
+          console.log('[DEBUG] No user found in localStorage to update');
         }
       }
       
       return response.data;
     } catch (error) {
-      console.error('Error updating first login status:', error);
+      console.error('[DEBUG] Error updating first login status:', error);
+      console.error('[DEBUG] Error response:', error.response?.data);
       return false;
     }
   }

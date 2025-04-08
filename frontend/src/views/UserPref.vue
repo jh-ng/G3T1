@@ -149,6 +149,7 @@ const dietOptions = ['Halal', 'Vegetarian', 'Kosher', 'None']
 
 async function submitPreferences() {
   triedSubmit.value = true
+  console.log('[DEBUG] Submit preferences called');
 
   if (
     !form.travel_style.length ||
@@ -159,15 +160,22 @@ async function submitPreferences() {
     (form.diet.includes('Allergy') && !form.allergy_detail?.length)
   ) {
     alert('Please fill in all required fields');
+    console.log('[DEBUG] Form validation failed');
     return;
   }
 
   try {
+    console.log('[DEBUG] Form validation passed, calling updateFirstLoginStatus');
+    console.log('[DEBUG] Current user before update:', authService.getCurrentUser());
+    
     // Only update first login status
-    await authService.updateFirstLoginStatus();
+    const result = await authService.updateFirstLoginStatus();
+    console.log('[DEBUG] updateFirstLoginStatus result:', result);
+    console.log('[DEBUG] Current user after update:', authService.getCurrentUser());
+    
     alert('Preferences saved successfully!');
   } catch (err) {
-    console.error(err);
+    console.error('[DEBUG] Error in submitPreferences:', err);
     alert('Network error');
   }
 }

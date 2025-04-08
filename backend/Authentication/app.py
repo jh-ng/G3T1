@@ -242,14 +242,31 @@ def delete_user(user_id):
 @token_required
 def update_first_login():
     try:
+        # Debug: Print the request.user object to see what we're working with
+        print("[DEBUG] request.user:", request.user)
+        
+        # Get user_id from the token payload
         user_id = request.user.get('user_id')
+        print("[DEBUG] Extracted user_id:", user_id)
+        
+        if not user_id:
+            return jsonify({'error': 'User ID not found in token'}), 400
+        
+        # Convert user_id to int if it's a string
+        if isinstance(user_id, str) and user_id.isdigit():
+            user_id = int(user_id)
+            print("[DEBUG] Converted user_id to int:", user_id)
         
         # Update the is_first_login flag to False
+        print("[DEBUG] Executing Supabase query with user_id:", user_id)
         result = supabase.table(AUTHENTICATION_TABLE).update({
             "is_first_login": False
         }).eq("id", user_id).execute()
         
+        print("[DEBUG] Supabase result:", result)
+        
         if not result.data or len(result.data) == 0:
+            print("[DEBUG] No data returned from update query")
             return jsonify({'error': 'Failed to update user status'}), 500
             
         return jsonify({
@@ -258,6 +275,7 @@ def update_first_login():
         }), 200
         
     except Exception as e:
+        print("[DEBUG] Exception in update_first_login:", str(e))
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
