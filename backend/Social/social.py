@@ -134,7 +134,7 @@ def comment_post():
     reply_to_username = None 
     reply_to_user_id=None
     if parent_comment_id:
-        parent_resp = supabase.table("comments").select("user_id").eq("id", parent_comment_id).single().execute()
+        parent_resp = supabase.table("comments").select("user_id","username").eq("id", parent_comment_id).single().execute()
         if parent_resp.data:
             #get the target person to reply to through parent comment data saved
             reply_to_user_id = parent_resp.data["user_id"]
@@ -206,21 +206,21 @@ def get_likes(post_id):
             .eq("post_id", post_id) \
             .execute()
 
-        # Get if current user has liked the post
+        # Get if current user has liked the post - remove .single()
         user_like = supabase.table("likes") \
             .select("*") \
             .eq("post_id", post_id) \
             .eq("liked_by_user_id", payload['user_id']) \
-            .single() \
             .execute()
 
         return jsonify({
             'likes': likes.data,
             'total_likes': len(likes.data),
-            'has_liked': bool(user_like.data)
+            'has_liked': len(user_like.data) > 0  # Changed to check if any likes exist
         }), 200
 
     except Exception as e:
+        print(f"Error in get_likes: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # get all the comments under the post
@@ -239,49 +239,65 @@ def get_comments(post_id):
             .order("created_at", desc=False) \
             .execute()
 
+        # If no comments exist, return empty array
+        if not comments.data:
+            return jsonify({
+                'comments': []
+            }), 200
+
         # Organize comments into a simplified structure
-        # One parent comment (original) with all replies at one level
         structured_comments = []
         replies_map = {}
 
         for comment in comments.data:
-            if comment['parent_comment_id'] is None:
+            if comment.get('parent_comment_id') is None:
                 # This is an original comment
                 comment['replies'] = []
                 structured_comments.append(comment)
                 replies_map[comment['id']] = comment['replies']
             else:
                 # This is a reply - add it to the parent's replies
-                # If replying to a reply, we'll still put it at the same level
-                # Find the original parent comment
-                original_parent_id = find_original_parent(comments.data, comment['parent_comment_id'])
-                if original_parent_id in replies_map:
-                    # Add mention of who they're replying to if it's a reply to a reply
-                    if comment['parent_comment_id'] != original_parent_id:
-                        replied_to = next((c for c in comments.data if c['id'] == comment['parent_comment_id']), None)
-                        if replied_to:
-                            comment['comment'] = f"@{replied_to['username']} {comment['comment']}"
-                    replies_map[original_parent_id].append(comment)
+                try:
+                    # Find the original parent comment
+                    original_parent_id = find_original_parent(comments.data, comment['parent_comment_id'])
+                    if original_parent_id in replies_map:
+                        # Add mention of who they're replying to if it's a reply to a reply
+                        if comment['parent_comment_id'] != original_parent_id:
+                            replied_to = next((c for c in comments.data if c['id'] == comment['parent_comment_id']), None)
+                            if replied_to:
+                                comment['comment_text'] = f"@{replied_to['username']} {comment['comment_text']}"
+                        replies_map[original_parent_id].append(comment)
+                except Exception as e:
+                    print(f"Error processing reply {comment['id']}: {str(e)}")
+                    continue
 
         # Sort replies by timestamp for each parent comment
         for comment in structured_comments:
-            comment['replies'].sort(key=lambda x: x['created_at'])
+            if 'replies' in comment:
+                comment['replies'].sort(key=lambda x: x.get('created_at', ''))
 
         return jsonify({
             'comments': structured_comments
         }), 200
 
     except Exception as e:
+        print(f"Error in get_comments: {str(e)}")
+        import traceback
+        print(traceback.format_exc())  # Print full stack trace
         return jsonify({'error': str(e)}), 500
 
 def find_original_parent(comments, reply_id):
     """
     Recursively find the original parent comment ID
     """
-    comment = next((c for c in comments if c['id'] == reply_id), None)
-    if not comment or comment['parent_comment_id'] is None:
+    try:
+        comment = next((c for c in comments if c['id'] == reply_id), None)
+        if not comment or comment.get('parent_comment_id') is None:
+            return reply_id
+        return find_original_parent(comments, comment['parent_comment_id'])
+    except Exception as e:
+        print(f"Error in find_original_parent: {str(e)}")
         return reply_id
-    return find_original_parent(comments, comment['parent_comment_id'])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5003)
