@@ -2,7 +2,7 @@ const config = {
     // API configuration
     api: {
         // Base URL for the notification API
-        notificationBaseUrl: 'https://personal-nrm7dwxa.outsystemscloud.com/NotificationService/rest/NotificationAPI',
+        notificationBaseUrl: 'http://localhost:8000/api/notification',
         timeout: 10000
     },
 
