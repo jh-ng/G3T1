@@ -11,30 +11,50 @@
       {{ error }}
     </v-alert>
 
-    <div v-if="!loading && !error">
-      <v-container class="px-4 pt-4">
-        <v-row align="center" justify="space-between">
-          <v-col cols="12" md="8">
-            <v-select
-              v-model="selectedTags"
-              :items="availableTags"
-              label="Filter by tags"
-              multiple
-              chips
-              clearable
-            ></v-select>
-          </v-col>
-          <v-col cols="12" md="4" class="d-flex justify-end">
-            <v-btn color="primary" @click="applyFilters"> Filter </v-btn>
-            <v-btn
-              color="secondary"
-              @click="removeAllFilters"
-              style="margin-left: 16px"
-              >Reset</v-btn
-            >
-          </v-col>
-        </v-row>
-      </v-container>
+    <div v-if="!loading && !error" class="feed-content">
+      <v-card class="mb-6 filter-card" elevation="2" rounded="lg">
+        <v-container>
+          <v-row align="center">
+            <v-col cols="12">
+              <v-select
+                v-model="selectedTags"
+                :items="availableTags"
+                label="Filter posts by tags"
+                multiple
+                chips
+                clearable
+                variant="outlined"
+                density="comfortable"
+                hide-details
+                prepend-inner-icon="mdi-filter-variant"
+              ></v-select>
+            </v-col>
+          </v-row>
+          <v-row justify="end">
+            <v-col cols="12" md="4" class="d-flex justify-end">
+              <v-btn
+                color="primary"
+                @click="applyFilters"
+                prepend-icon="mdi-magnify"
+                variant="elevated"
+                rounded
+              >
+                Apply Filters
+              </v-btn>
+              <v-btn
+                color="secondary"
+                @click="removeAllFilters"
+                class="ml-4"
+                prepend-icon="mdi-refresh"
+                variant="outlined"
+                rounded
+              >
+                Reset
+              </v-btn>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-card>
 
       <div v-for="post in posts" :key="post.id" class="post-wrapper">
         <PostItem
