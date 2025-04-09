@@ -3,6 +3,9 @@ FROM python:3.11-slim
 WORKDIR /app
 
 COPY requirements.txt .
+
+# Add this line to install wheel before your requirements
+RUN pip install --upgrade pip wheel setuptools
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY post.py .

@@ -204,7 +204,7 @@ class AuthService {
         throw new Error(`Missing required fields: ${missing.join(', ')}`);
       }
 
-      const response = await axios.post(`${USER_API_URL}/users/create`, createData);
+      const response = await axios.post(`${USER_API_URL}/user/create`, createData);
       if (!response.data) {
         throw new Error('Empty response from user service');
       }
