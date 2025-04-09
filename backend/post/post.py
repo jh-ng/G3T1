@@ -119,40 +119,6 @@ def create_post():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# @app.route('/api/posts', methods=['GET'])
-# def get_posts():
-#     auth_header = request.headers.get('Authorization')
-#     if not auth_header or not auth_header.startswith('Bearer '):
-#         return jsonify({'error': 'No token provided'}), 401
-    
-#     token = auth_header.split(' ')[1]
-#     payload = verify_token(token)
-    
-#     if not payload:
-#         return jsonify({'error': 'Invalid or expired token'}), 401
-    
-#     try:
-#         # Query posts from Supabase
-#         response = supabase.table(POSTS_TABLE).select('*').order('created_at', desc=True).execute()
-        
-#         posts = response.data
-        
-#         return jsonify({
-#             'posts': [{
-#                 'id': post['id'],
-#                 'title': post['title'],
-#                 'content': post['content'],
-#                 'image_url': post['image_url'],
-#                 'created_at': post['created_at'],
-#                 'user_id': post['user_id'],
-#                 'username': post['username'],
-#                 'preference': [tag.strip() for tag in (post['preferences'] or '').split(',') if tag],
-#                 'location': post['location']
-#             } for post in posts]
-#         }), 200
-        
-#     except Exception as e:
-#         return jsonify({'error': str(e)}), 500
     
 @app.route('/api/posts', methods=['GET'])
 def get_posts():

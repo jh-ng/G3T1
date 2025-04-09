@@ -155,6 +155,20 @@ services:
           - DELETE
           - OPTIONS
 
+  - name: create-post-service
+    url: http://create-post-service:5005  # This is the internal Flask service URL
+    routes:
+      - name: create-post-route
+        paths:
+          - /api/cposts  # External path that users will hit for creating posts
+          - /api/user/taste-preferences
+        strip_path: false
+        methods:
+          - POST
+          - GET
+          - OPTIONS
+
+
 plugins:
   - name: cors
     config:

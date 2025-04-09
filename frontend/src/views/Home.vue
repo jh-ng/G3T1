@@ -1,12 +1,13 @@
 <template>
   <div class="home-container">
     <v-card class="mx-auto" max-width="800">
-      <v-card-title class="d-flex justify-space-between align-center">
-        <span class="text-h5">Travel Posts</span>
+      <v-card-title class="d-flex justify-space-between align-center pa-4">
+        <span class="text-h5 ml-6">Travel Posts</span>
         <v-btn
           color="primary"
           to="/create-post"
           v-if="isAuthenticated"
+          class="mr-6"
         >
           Create Post
         </v-btn>

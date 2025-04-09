@@ -46,7 +46,16 @@ def get_user_preferences(token):
         response.raise_for_status()  # Raise an exception for bad status codes
 
         data = response.json()
-        return data.get("taste_preferences", {})  # Extract taste_preferences
+        taste_preferences = data.get("taste_preferences", {})
+        selected_keys = ["diet", "travel_style", "tourist_sites"]
+        filtered_preferences = {
+            key: [
+                val for val in taste_preferences.get(key, []) 
+                if val and val != "None"
+            ]
+            for key in selected_keys
+        }
+        return filtered_preferences
 
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 401:
@@ -75,7 +84,7 @@ def get_preferences():
         return jsonify({'error': 'Could not retrieve preferences'}), 500
     return jsonify({'taste_preferences': preferences})
 
-@app.route('/api/posts', methods=['POST'])
+@app.route('/api/cposts', methods=['POST'])
 def create_post():
     logging.info("Received create post request")
     # Auth check - this part works fine based on your logs
@@ -118,7 +127,7 @@ def create_post():
     try:
         if not POST_SERVICE_URL:
             logging.error("POST_SERVICE_URL is not set")
-            return jsonify({'error': 'POST_SERVICE_URL not configured'}), 500
+            return jsonify({'error': 'POST_SERVICE_URL not configured'}), 501
             
         headers = {'Authorization': f'Bearer {token}'}
         post_url = f"{POST_SERVICE_URL}/api/posts"
@@ -131,20 +140,13 @@ def create_post():
         
         if response.status_code != 201:
             logging.error(f"Post service error: {response.text}")
-            return jsonify({'error': 'Post MS failed', 'details': response.text}), 500
+            return jsonify({'error': 'Post MS failed', 'details': response.text}), 502
             
         return jsonify(response.json()), 201
 
     except Exception as e:
         logging.error(f"Post creation failed: {str(e)}")
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
-
-
-# Example route to get all posts (for testing)
-@app.route('/api/posts', methods=['GET'])
-def get_posts():
-    # Replace with logic to retrieve posts from your database
-    return jsonify([{'userId': 1, 'content': 'Test post', 'location': 'Test location'}]), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5005)  # Use a different port than preferences service
