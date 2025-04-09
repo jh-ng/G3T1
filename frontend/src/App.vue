@@ -1,6 +1,6 @@
 <template>
   <v-app style="height: 100vh; width: 100vw">
-    <v-app-bar color="primary">
+    <v-app-bar color="#6C64F2">
       <v-app-bar-nav-icon
         variant="text"
         @click.stop="drawer = !drawer"
@@ -68,7 +68,7 @@
       <v-divider></v-divider>
       <v-spacer></v-spacer>
       <div class="pa-4">
-        <v-btn rounded block color="primary" to="/create-post"
+        <v-btn rounded block color="#6C64F2" to="/create-post"
           >Create Post</v-btn
         >
       </div>

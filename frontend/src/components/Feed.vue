@@ -3,7 +3,7 @@
     <v-progress-circular
       v-if="loading"
       indeterminate
-      color="primary"
+      color="#6C64F2"
       class="mx-auto d-block my-4"
     ></v-progress-circular>
 
