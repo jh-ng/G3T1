@@ -77,7 +77,7 @@ const markAsRead = async (id) => {
     
     const postId = notification.PostId;
     
-    //emitClose();
+    emitClose();
 
     await notificationService.markAsRead(id);
     
