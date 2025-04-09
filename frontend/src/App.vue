@@ -1,9 +1,20 @@
 <template>
   <v-app style="height: 100vh; width: 100vw">
-    <v-app-bar color="primary">
-      <v-app-bar-nav-icon variant="text" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
+    <v-app-bar color="#6C64F2">
+      <v-app-bar-nav-icon
+        variant="text"
+        @click.stop="drawer = !drawer"
+      ></v-app-bar-nav-icon>
 
-      <v-toolbar-title>Travel Planner</v-toolbar-title>
+      <router-link to="/home" class="d-flex align-center text-decoration-none">
+        <img
+          src="./assets/appLogo.png"
+          alt="JetSetGo Logo"
+          height="50"
+          class="mr-2"
+        />
+        <span class="font-weight-bold text-white">JetSetGo</span>
+      </router-link>
 
       <v-spacer></v-spacer>
 
@@ -17,34 +28,58 @@
         </router-link>
         <v-btn @click="handleLogout" variant="text">Logout</v-btn>
         <!-- Notification Bell Only -->
-        <v-btn icon variant="text" @click="toggleNotificationPanel" class="notification-bell">
-          <v-badge :content="unreadCount" :model-value="unreadCount > 0" color="error">
+        <v-btn
+          icon
+          variant="text"
+          @click="toggleNotificationPanel"
+          class="notification-bell"
+        >
+          <v-badge
+            :content="unreadCount"
+            :model-value="unreadCount > 0"
+            color="error"
+          >
             <v-icon>mdi-bell</v-icon>
           </v-badge>
         </v-btn>
       </template>
     </v-app-bar>
 
-
     <!-- Navigation Drawer -->
-    <v-navigation-drawer v-model="drawer" temporary style="height: 100vh; display: flex; flex-direction: column">
+    <v-navigation-drawer
+      v-model="drawer"
+      temporary
+      style="height: 100vh; display: flex; flex-direction: column"
+    >
       <v-list>
         <v-list-item to="/home" title="Home"></v-list-item>
         <v-list-item to="/travel-planner" title="Travel Planner"></v-list-item>
-        <v-list-item to="/saved-itineraries" prepend-icon="mdi-book-open-variant">
+        <v-list-item
+          to="/saved-itineraries"
+          prepend-icon="mdi-book-open-variant"
+        >
           Saved Itineraries
         </v-list-item>
-        <v-list-item to="/preferences-editor" title="User Preferences"></v-list-item>
+        <v-list-item
+          to="/preferences-editor"
+          title="User Preferences"
+        ></v-list-item>
       </v-list>
       <v-divider></v-divider>
       <v-spacer></v-spacer>
       <div class="pa-4">
-        <v-btn rounded block color="primary" to="/create-post">Create Post</v-btn>
+        <v-btn rounded block color="#6C64F2" to="/create-post"
+          >Create Post</v-btn
+        >
       </div>
     </v-navigation-drawer>
 
     <!-- Notification Drawer Component -->
-    <NotificationDrawer v-if="isAuthenticated" :show="notificationDrawer" @close="notificationDrawer = false" />
+    <NotificationDrawer
+      v-if="isAuthenticated"
+      :show="notificationDrawer"
+      @close="notificationDrawer = false"
+    />
 
     <v-main>
       <router-view></router-view>
@@ -53,16 +88,15 @@
 </template>
 
 <script>
-import authService from './services/auth';
-import notificationService from '@/services/notificationService';
-import config from '@/services/config';
-import NotificationDrawer from './components/NotificationDrawer.vue';
-
+import authService from "./services/auth";
+import notificationService from "@/services/notificationService";
+import config from "@/services/config";
+import NotificationDrawer from "./components/NotificationDrawer.vue";
 
 export default {
   name: "App",
   components: {
-    NotificationDrawer
+    NotificationDrawer,
   },
   data() {
     return {
@@ -71,29 +105,29 @@ export default {
       currentUser: null,
       notificationDrawer: false,
       id: null,
-      username: ''
-    }
+      username: "",
+    };
   },
   created() {
     this.checkAuth();
     // Add event listener for storage changes
-    window.addEventListener('storage', this.checkAuth);
+    window.addEventListener("storage", this.checkAuth);
   },
   watch: {
     // Watch for route changes to update auth state
-    '$route': {
+    $route: {
       immediate: true,
       handler() {
         this.checkAuth();
-      }
-    }
+      },
+    },
   },
   mounted() {
     this.startNotificationPolling();
   },
   beforeUnmount() {
     // Remove event listener
-    window.removeEventListener('storage', this.checkAuth);
+    window.removeEventListener("storage", this.checkAuth);
 
     this.stopNotificationPolling();
   },
@@ -116,7 +150,6 @@ export default {
         const isValid = await authService.verifyToken();
         if (!isValid) {
           this.handleLogout();
-
         } else {
           // Initialize notification service with current user ID
           notificationService.initialize(this.currentUser.id);
@@ -136,9 +169,9 @@ export default {
       }, config.notifications.pollingInterval);
     },
     stopNotificationPolling() {
-      if (this.notificationPollingInterval) clearInterval(this.notificationPollingInterval);
+      if (this.notificationPollingInterval)
+        clearInterval(this.notificationPollingInterval);
     },
-
 
     handleLogout() {
       authService.logout();
@@ -147,9 +180,9 @@ export default {
       this.notifications = [];
       this.unreadCount = 0;
       this.notificationDrawer = false;
-      this.$router.push('/');
-    }
-  }
+      this.$router.push("/");
+    },
+  },
 };
 </script>
 
@@ -183,7 +216,7 @@ export default {
 .navbar-brand a {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #4CAF50;
+  color: #4caf50;
   text-decoration: none;
 }
 
@@ -203,7 +236,7 @@ export default {
 
 .nav-link:hover {
   background-color: #f5f5f5;
-  color: #4CAF50;
+  color: #4caf50;
 }
 
 .welcome-text {
@@ -212,7 +245,7 @@ export default {
 }
 
 .router-link-active {
-  color: #4CAF50;
+  color: #4caf50;
   font-weight: bold;
 }
 

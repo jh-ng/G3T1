@@ -50,8 +50,6 @@ const notificationApi = {
         `${config.api.notificationBaseUrl}/notifications/${userId}/`,
         { method: 'GET', ...options }
       );
-      
-      console.log('Fetched Notifications:', response);
       return response.List || [];
     } catch (error) {
       console.error('Fetch Notifications Error:', error);

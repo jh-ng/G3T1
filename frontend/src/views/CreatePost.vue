@@ -59,9 +59,7 @@
           </div>
           <div class="map-container" ref="myMap"></div>
           <p v-if="selectedLocation">
-            Selected: {{ selectedLocation.address }} ({{
-              selectedLocation.lat
-            }}, {{ selectedLocation.lon }})
+            Selected: {{ selectedLocation.address }}
           </p>
           <v-btn
             color="primary"
@@ -202,12 +200,8 @@ export default {
 
         const data = await response.json();
         const tastePreferences = data.taste_preferences || {};
-        // Collect all array values from the taste_preferences object and flatten them
         this.preferences = [];
         for (const key in tastePreferences) {
-          if (key === "startTime" || key === "endTime") {
-            continue; // Skip 'startTime' and 'endTime'
-          }
           const value = tastePreferences[key];
           if (Array.isArray(value)) {
             this.preferences = this.preferences.concat(value);
@@ -217,7 +211,7 @@ export default {
         }
       } catch (err) {
         console.error("Failed to load preferences:", err.message);
-        this.preferences = []; // fallback to empty list
+        this.preferences = []; 
       }
     },
 
@@ -318,7 +312,7 @@ export default {
 
         // Redirect to home page after a short delay
         setTimeout(() => {
-          this.$router.push("/");
+          this.$router.push("/home");
         }, 500);
       } catch (err) {
         this.error = err.message;
