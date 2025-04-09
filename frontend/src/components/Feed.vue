@@ -79,8 +79,6 @@ export default {
       "Halal",
       "Vegetarian",
       "Kosher",
-      "None",
-      // Add more if needed
     ];
 
     const fetchPosts = async () => {
