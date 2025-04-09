@@ -10,7 +10,7 @@
     <v-alert v-if="error" type="error" class="mx-4">
       {{ error }}
     </v-alert>
-
+    
     <div v-if="!loading && !error" class="feed-content">
       <v-card class="mb-6 filter-card" elevation="2" rounded="lg">
         <v-container>
@@ -57,7 +57,7 @@
       </v-card>
 
       <div v-for="post in posts" :key="post.id" :id="`post-${post.id}`" class="post-wrapper">
-        <PostItem :post="post" @like-post="handleLike" @comment-post="handleComment" />
+        <PostItem :post="post" @tag-clicked="handleTagClick" />
       </div>
 
       <v-alert v-if="posts.length === 0" type="info" class="mx-4">
@@ -138,6 +138,7 @@ export default {
         posts.value = data.posts.map((post) => ({
           ...post,
           username: post.username || currentUser.username,
+          tags: post.preference || [],
         }));
 
         console.log("Loaded post objects:", posts.value);
@@ -196,14 +197,11 @@ export default {
       fetchPosts();
     };
 
-    const handleLike = (postId) => {
-      console.log("Liking post:", postId);
-      // Implement like functionality
-    };
-
-    const handleComment = (postId) => {
-      console.log("Commenting on post:", postId);
-      // Implement comment functionality
+    const handleTagClick = (tag) => {
+      if (!selectedTags.value.includes(tag)) {
+        selectedTags.value.push(tag);
+        fetchPosts();
+      }
     };
 
     onMounted(() => {
@@ -214,12 +212,11 @@ export default {
       posts,
       loading,
       error,
-      handleLike,
-      handleComment,
       selectedTags,
       availableTags,
       applyFilters,
       removeAllFilters,
+      handleTagClick
     };
   },
 };

@@ -5,6 +5,9 @@
       <router-link :to="'/user/' + post.user_id" class="username">
         {{ displayUsername }}
       </router-link>
+      <div v-if="post.location" class="post-location text-gray-500 text-sm">
+        📍 {{ simplifiedLocation }}
+      </div>
     </div>
 
     <!-- Post Image -->
@@ -43,26 +46,19 @@
       <span class="post-text">{{ post.title }}</span>
     </div>
 
-    <!-- Tags -->
+    <!-- Tags moved and aligned left -->
     <div
-      v-if="post.preference && post.preference.length"
-      class="post-tags px-4 mb-2"
+      v-if="post.tags && post.tags.length"
+      class="post-tags text-left pl-4 mb-2"
     >
       <span
-        v-for="(tag, index) in post.preference"
-        :key="index"
-        class="tag text-blue-500 font-semibold mr-2"
+        v-for="tag in post.tags"
+        :key="tag"
+        class="tag-link mr-2 cursor-pointer"
+        @click="$emit('tag-clicked', tag)"
       >
         #{{ tag }}
       </span>
-    </div>
-
-    <!-- Location -->
-    <div
-      v-if="post.location"
-      class="post-location px-4 mb-2 text-gray-500 text-sm"
-    >
-      📍 {{ simplifiedLocation }}
     </div>
 
     <!-- View Comments Link -->
@@ -533,7 +529,8 @@ export default {
 .post-header {
   padding: 14px 16px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   border-bottom: 1px solid #efefef;
 }
 
@@ -762,9 +759,19 @@ export default {
   border-bottom: 1px solid #efefef;
 }
 
-.post-tags .tag {
-  display: inline-block;
-  margin-right: 8px;
-  font-size: 14px;
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tag-link {
+  color: #1DA1F2;
+  font-weight: 500;
+}
+
+.tag-link:hover {
+  color: #1a91da;
+  text-decoration: underline;
 }
 </style>
