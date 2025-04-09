@@ -24,9 +24,19 @@
       </template>
       <template v-else>
         <router-link :to="`/user/${currentUser?.id}`" class="welcome-link">
-          <span class="mr-4">Welcome, {{ currentUser?.username }}</span>
+          <span class="mr-4 font-weight-bold"
+            >Welcome, {{ currentUser?.username }}</span
+          >
+          <img
+            src="./assets/user.png"
+            alt="JetSetGo Logo"
+            height="30"
+            class="mr-2"
+          />
         </router-link>
-        <v-btn @click="handleLogout" variant="text">Logout</v-btn>
+        <v-btn @click="handleLogout" variant="text" class="font-weight-bold"
+          >Logout</v-btn
+        >
         <!-- Notification Bell Only -->
         <v-btn
           icon
