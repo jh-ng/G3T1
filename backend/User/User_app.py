@@ -58,8 +58,8 @@ def token_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# This endpoint is called by the auth service through Kong
-@app.route('/api/users/create', methods=['POST'])
+# This endpoint is called when the user submits their taste and preferences for the first time.
+@app.route('/api/user/create', methods=['POST'])
 @token_required
 def create_user():
     data = request.get_json()

@@ -47,6 +47,12 @@ const routes = [
     meta: { requiresAuth: true, allowFirstLogin: true }
   },
   {
+    path: '/user-preferences',
+    name: 'user-preferences',
+    component: () => import('../views/UserPref.vue'),
+    meta: { requiresAuth: true, allowFirstLogin: true }
+  },
+  {
     path: '/travel-planner',
     name: 'TravelPlanner',
     component: () => import('../views/TravelPlanner.vue'),
