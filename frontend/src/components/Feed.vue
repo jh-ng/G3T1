@@ -41,6 +41,7 @@
           :post="post"
           @like-post="handleLike"
           @comment-post="handleComment"
+          @tag-clicked="handleTagClick"
         />
       </div>
 
@@ -122,6 +123,7 @@ export default {
         posts.value = data.posts.map((post) => ({
           ...post,
           username: post.username || currentUser.username,
+          tags: post.preference || [],
         }));
       } catch (err) {
         error.value = err.message;
@@ -146,14 +148,11 @@ export default {
       fetchPosts();
     };
 
-    const handleLike = (postId) => {
-      console.log("Liking post:", postId);
-      // Implement like functionality
-    };
-
-    const handleComment = (postId) => {
-      console.log("Commenting on post:", postId);
-      // Implement comment functionality
+    const handleTagClick = (tag) => {
+      if (!selectedTags.value.includes(tag)) {
+        selectedTags.value.push(tag);
+        fetchPosts();
+      }
     };
 
     onMounted(() => {
@@ -164,12 +163,11 @@ export default {
       posts,
       loading,
       error,
-      handleLike,
-      handleComment,
       selectedTags,
       availableTags,
       applyFilters,
       removeAllFilters,
+      handleTagClick
     };
   },
 };
