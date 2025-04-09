@@ -16,7 +16,6 @@ COPY requirements.txt .
 # Add this line to install wheel before your requirements
 RUN pip install --upgrade pip wheel setuptools
 RUN pip install --no-cache-dir -r requirements.txt
-=======
 RUN python -m pip install --upgrade pip && \
     python -m pip install --no-cache-dir wheel setuptools build && \
     python -m pip install --no-cache-dir certifi six urllib3 && \
