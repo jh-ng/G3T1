@@ -111,15 +111,18 @@ def like_post():
 
 @app.route('/api/social/comment', methods=['POST'])
 def comment_post():
+    # Auth check
     token = request.headers.get('Authorization', '').split(' ')[-1]
-    payload = verify_token(token)
+    payload = verify_token(token) #extracts the user_id and username from the token
     if not payload:
         return jsonify({'error': 'Invalid or missing token'}), 401
 
+    # get the data from the frontend
     data=request.get_json()
     post_id = data.get('post_id')
     comment_text = data.get('comment')
-    parent_comment_id = data.get('parent_comment_id') 
+    parent_comment_id = data.get('parent_comment_id')
+    reply_to_user_id = data.get('reply_to_user_id')  # Only get user_id
 
     if not post_id or not comment_text:
         return jsonify({'error': 'Missing post_id or comment'}), 400 
@@ -130,25 +133,20 @@ def comment_post():
         return jsonify({"error": "Post not found"}), 404 
     post_owner_id = post_resp.data["user_id"]
 
-    # if this is a reply, get parent info
-    reply_to_username = None 
-    reply_to_user_id=None
-    if parent_comment_id:
-        parent_resp = supabase.table("comments").select("user_id","username").eq("id", parent_comment_id).single().execute()
+    # gets the user_id of the parent comment if frontnend does not send it
+    if not reply_to_user_id and parent_comment_id:
+        parent_resp = supabase.table("comments").select("user_id").eq("id", parent_comment_id).single().execute()
         if parent_resp.data:
-            #get the target person to reply to through parent comment data saved
             reply_to_user_id = parent_resp.data["user_id"]
-            reply_to_username = parent_resp.data["username"]
 
-    # Insert comment (with optional reply info)
+    # Insert comment (with reply info)
     result = supabase.table("comments").insert({
         "post_id": post_id,
         "user_id": payload['user_id'],
         "username": payload['username'],
         "comment_text": comment_text,
         "parent_comment_id": parent_comment_id,
-        "reply_to_user_id": reply_to_user_id,
-        "reply_to_username": reply_to_username
+        "reply_to_user_id": reply_to_user_id
     }).execute()
 
     created_at = result.data[0]['created_at'] if result.data else datetime.now().isoformat()
@@ -159,7 +157,7 @@ def comment_post():
     comment_id = result.data[0]['id']
 
     if parent_comment_id:
-        # This is a reply to a comment
+        # 1.  a reply to a comment
         if reply_to_user_id and reply_to_user_id != payload['user_id']:
             # Notify the person being replied to
             publish_notification("comment_reply", {
@@ -173,7 +171,7 @@ def comment_post():
                 "created_at": created_at
             })
     else:
-        # This is a new comment on the post
+        # 2. new comment on the post
         if post_owner_id != payload['user_id']:
             # Notify the post owner
             publish_notification("new_comment", {
@@ -261,11 +259,7 @@ def get_comments(post_id):
                     # Find the original parent comment
                     original_parent_id = find_original_parent(comments.data, comment['parent_comment_id'])
                     if original_parent_id in replies_map:
-                        # Add mention of who they're replying to if it's a reply to a reply
-                        if comment['parent_comment_id'] != original_parent_id:
-                            replied_to = next((c for c in comments.data if c['id'] == comment['parent_comment_id']), None)
-                            if replied_to:
-                                comment['comment_text'] = f"@{replied_to['username']} {comment['comment_text']}"
+                        # Don't modify the comment text here - the frontend will handle the mention
                         replies_map[original_parent_id].append(comment)
                 except Exception as e:
                     print(f"Error processing reply {comment['id']}: {str(e)}")
