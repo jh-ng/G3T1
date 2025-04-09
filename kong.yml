@@ -54,22 +54,7 @@ services:
   - name: user-service
     url: http://user-service:5002
     routes:
-      - name: internal-user-routes  # Most specific route first
-        paths:
-          - /api/user/create
-        strip_path: false
-        methods:
-          - POST
-          - OPTIONS
-      - name: user-taste-preferences  # Second most specific
-        paths:
-          - /api/user/
-        strip_path: false
-        methods:
-          - GET
-          - PUT
-          - OPTIONS
-      - name: user-routes  # Most general route last
+      - name: user-routes
         paths:
           - /api/user
         strip_path: false
@@ -78,6 +63,21 @@ services:
           - POST
           - PUT
           - DELETE
+          - OPTIONS
+      - name: user-taste-preferences  # New route for taste preferences
+        paths:
+          - /api/user/
+        strip_path: false
+        methods:
+          - GET
+          - OPTIONS
+      - name: internal-user-routes
+        paths:
+          - /api/internal/user
+          - /api/internal/user/create  # Added specific path for user creation
+        strip_path: false
+        methods:
+          - POST
           - OPTIONS
 
   # Location Service
