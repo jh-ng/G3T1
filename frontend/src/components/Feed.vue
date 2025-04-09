@@ -1,11 +1,7 @@
 <template>
   <div class="feed">
-    <v-progress-circular
-      v-if="loading"
-      indeterminate
-      color="primary"
-      class="mx-auto d-block my-4"
-    ></v-progress-circular>
+    <v-progress-circular v-if="loading" indeterminate color="primary"
+      class="mx-auto d-block my-4"></v-progress-circular>
 
     <v-alert v-if="error" type="error" class="mx-4">
       {{ error }}
@@ -15,33 +11,18 @@
       <v-container class="px-4 pt-4">
         <v-row align="center" justify="space-between">
           <v-col cols="12" md="8">
-            <v-select
-              v-model="selectedTags"
-              :items="availableTags"
-              label="Filter by tags"
-              multiple
-              chips
-              clearable
-            ></v-select>
+            <v-select v-model="selectedTags" :items="availableTags" label="Filter by tags" multiple chips
+              clearable></v-select>
           </v-col>
           <v-col cols="12" md="4" class="d-flex justify-end">
             <v-btn color="primary" @click="applyFilters"> Filter </v-btn>
-            <v-btn
-              color="secondary"
-              @click="removeAllFilters"
-              style="margin-left: 16px"
-              >Reset</v-btn
-            >
+            <v-btn color="secondary" @click="removeAllFilters" style="margin-left: 16px">Reset</v-btn>
           </v-col>
         </v-row>
       </v-container>
 
-      <div v-for="post in posts" :key="post.id" class="post-wrapper">
-        <PostItem
-          :post="post"
-          @like-post="handleLike"
-          @comment-post="handleComment"
-        />
+      <div v-for="post in posts" :key="post.id" :id="`post-${post.id}`" class="post-wrapper">
+        <PostItem :post="post" @like-post="handleLike" @comment-post="handleComment" />
       </div>
 
       <v-alert v-if="posts.length === 0" type="info" class="mx-4">
@@ -52,9 +33,10 @@
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch, nextTick } from "vue";
 import PostItem from "@/components/Post.vue";
 import authService from "@/services/auth";
+import { useRoute } from "vue-router";
 
 export default {
   name: "MyFeed",
@@ -66,6 +48,7 @@ export default {
     const loading = ref(true);
     const error = ref(null);
     const selectedTags = ref([]);
+    const route = useRoute();
     const availableTags = [
       "Active",
       "Cultural",
@@ -123,6 +106,16 @@ export default {
           ...post,
           username: post.username || currentUser.username,
         }));
+
+        console.log("Loaded post objects:", posts.value);
+        console.log("Post IDs in data:", posts.value.map(post => post.id));
+
+        await nextTick();
+        const scrollToPostId = route.query.scrollToPost;
+        if (scrollToPostId) {
+          console.log('Found scrollToPost in URL:', scrollToPostId);
+          scrollToPost(scrollToPostId);
+        }
       } catch (err) {
         error.value = err.message;
         console.error("Error fetching posts:", err);
@@ -136,6 +129,30 @@ export default {
         loading.value = false;
       }
     };
+
+    const scrollToPost = (postId) => {
+      if (!postId) return;
+
+      console.log('Attempting to scroll to post:', postId);
+
+      // Add a delay to ensure DOM is fully updated
+      setTimeout(() => {
+        const postElement = document.getElementById(`post-${postId}`);
+        if (postElement) {
+          console.log('Found post element, scrolling into view');
+          postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          console.warn(`Post element with ID post-${postId} not found`);
+        }
+      }, 500); // 500ms delay
+    };
+
+    // Watch for route changes to handle direct links 
+    watch(() => route.query.scrollToPost, (newPostId) => {
+      if (newPostId && !loading.value) {
+        scrollToPost(newPostId);
+      }
+    });
 
     const applyFilters = () => {
       fetchPosts(selectedTags.value);
