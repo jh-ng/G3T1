@@ -23,16 +23,28 @@ CORS(app, resources={
         "supports_credentials": True
     }
 })
+# Define the table name for authentication
+AUTHENTICATION_TABLE = "authentication"
 
-# Initialize Supabase client with environment variables
+# Initialize Supabase client
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 
-# Validate that environment variables are set
-if not supabase_url or not supabase_key:
-    print("Warning: SUPABASE_URL or SUPABASE_KEY not set properly")
+print(f"[DEBUG] Initializing Supabase client with URL: {supabase_url}")
+try:
+    # Initialize global Supabase client
+    global supabase
+    supabase = create_client(supabase_url, supabase_key)
+    print("[DEBUG] Successfully initialized Supabase client")
     
-supabase: Client = create_client(supabase_url, supabase_key)
+    # Try to validate connection by performing a simple query
+    print("[DEBUG] Validating Supabase connection...")
+    test_response = supabase.table(AUTHENTICATION_TABLE).select("count").limit(1).execute()
+    print(f"[DEBUG] Supabase connection test response: {test_response}")
+except Exception as e:
+    print(f"[ERROR] Failed to initialize Supabase client: {str(e)}")
+    raise
+
 
 # Define the table name for authentication
 AUTHENTICATION_TABLE = "authentication"
@@ -85,12 +97,18 @@ def register():
         password_hash = generate_password_hash(data['password'])  
 
         # Insert new user in auth database with is_first_login flag set to true
-        response = supabase.table(AUTHENTICATION_TABLE).insert({
-            "username": data['username'],
-            "email": data['email'],
-            "password_hash": password_hash,
-            "is_first_login": True  # Add is_first_login flag
-        }).execute()
+        print("[DEBUG] Attempting to insert user into Supabase")
+        try:
+            response = supabase.table(AUTHENTICATION_TABLE).insert({
+                "username": data['username'],
+                "email": data['email'],
+                "password_hash": password_hash,
+                "is_first_login": True  # Add is_first_login flag
+            }).execute()
+            print("[DEBUG] Supabase response:", response)
+        except Exception as e:
+            print(f"[ERROR] Supabase insert error: {str(e)}")
+            raise
 
         # Check response before accessing it
         if not response.data or len(response.data) == 0:
@@ -136,6 +154,7 @@ def register():
         }), 201
         
     except Exception as e:
+        print(f"[ERROR] Registration error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # User Login & JWT Token Generation (POST)
