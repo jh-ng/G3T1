@@ -822,6 +822,13 @@ export default {
           if (!activity.travel_time && activity.travelTime) {
             activity.travel_time = activity.travelTime;
           }
+          if (!activity.travel_time_between_locations && (activity.travelTime || activity.travel_time)) {
+            activity.travel_time_between_locations = activity.travelTime || activity.travel_time;
+          }
+          if (!activity.travelTime && activity.travel_time_between_locations) {
+            activity.travelTime = activity.travel_time_between_locations;
+            activity.travel_time = activity.travel_time_between_locations;
+          }
           
           // Add default duration if not present
           // Format the duration
