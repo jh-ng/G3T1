@@ -86,10 +86,10 @@ export default {
     const route = useRoute();
     const availableTags = [
       "Active",
-      "Cultural",
       "Family",
       "Shopping",
       "Solo",
+      "Relaxation",
       "Nature Sites",
       "Cultural Sites",
       "Leisure Attractions",
