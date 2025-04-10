@@ -45,6 +45,49 @@
           </div>
         </v-col>
       </v-row>
+      <!-- Delete Account Section -->
+      <v-row v-if="isOwnProfile" class="mt-8">
+        <v-col cols="12" class="text-center">
+          <v-dialog v-model="showDeleteDialog" max-width="400">
+            <template v-slot:activator="{ props }">
+              <v-btn
+                color="error"
+                variant="outlined"
+                v-bind="props"
+                class="delete-account-btn"
+              >
+                Delete Account
+              </v-btn>
+            </template>
+
+            <v-card>
+              <v-card-title class="text-h5 pa-4">
+                Delete Account
+              </v-card-title>
+              <v-card-text class="pa-4">
+                Are you sure you want to delete your account? This action cannot be undone and you will lose all your data including posts, saved itineraries, and preferences.
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn
+                  color="grey-darken-1"
+                  variant="text"
+                  @click="showDeleteDialog = false"
+                >
+                  Cancel
+                </v-btn>
+                <v-btn
+                  color="error"
+                  variant="tonal"
+                  @click="handleDeleteAccount"
+                >
+                  Delete Account
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+        </v-col>
+      </v-row>
     </v-container>
   </div>
 </template>
@@ -66,6 +109,7 @@ export default {
       posts: [],
       loading: false,
       error: null,
+      showDeleteDialog: false,
       userAvatar: defaultAvatar,
       isOwnProfile: false, 
     };
@@ -171,6 +215,17 @@ export default {
         alert('Failed to delete post. Please try again.');
       }
     },
+    async handleDeleteAccount() {
+      // Close the dialog first for better UX
+      this.showDeleteDialog = false;
+      
+      // TODO: Implement backend call to delete account
+      console.log('Delete account functionality will be implemented');
+      
+      // For now, just log out the user after account deletion
+      authService.logout();
+      this.$router.push('/');
+    },
     handleLike(postId) {
       console.log('Liking post:', postId);
     },
@@ -210,6 +265,12 @@ export default {
   z-index: 1;
   background-color: rgba(255, 255, 255, 0.8);
   border-radius: 50%;
+}
+
+.delete-account-btn {
+  margin-top: 2rem;
+  text-transform: none;
+  font-weight: 500;
 }
 
 .delete-post-btn:hover {
