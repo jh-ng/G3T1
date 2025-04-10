@@ -313,7 +313,7 @@ export default {
         // Redirect to home page after a short delay
         setTimeout(() => {
           this.$router.push("/home");
-        }, 500);
+        }, 1000);
       } catch (err) {
         this.error = err.message;
         if (err.message.includes("token")) {

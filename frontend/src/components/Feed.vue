@@ -57,7 +57,7 @@
       </v-card>
 
       <div v-for="post in posts" :key="post.id" :id="`post-${post.id}`" class="post-wrapper">
-        <PostItem :post="post" @tag-clicked="handleTagClick" />
+        <PostItem :key="post.id + post.created_at" :post="post" @tag-clicked="handleTagClick" />
       </div>
 
       <v-alert v-if="posts.length === 0" type="info" class="mx-4">
@@ -204,7 +204,11 @@ export default {
       }
     };
 
-    onMounted(() => {
+    onMounted(fetchPosts);
+
+    // Refetch if route changes (e.g. redirected after creating a post)
+    watch(() => route.fullPath, () => {
+      console.log("Route changed, refetching posts...");
       fetchPosts();
     });
 
