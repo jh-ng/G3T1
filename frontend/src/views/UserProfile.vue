@@ -216,15 +216,32 @@ export default {
       }
     },
     async handleDeleteAccount() {
-      // Close the dialog first for better UX
-      this.showDeleteDialog = false;
-      
-      // TODO: Implement backend call to delete account
-      console.log('Delete account functionality will be implemented');
-      
-      // For now, just log out the user after account deletion
-      authService.logout();
-      this.$router.push('/');
+      try {
+        // Close the dialog first for better UX
+        this.showDeleteDialog = false;
+        this.loading = true;
+        this.error = null;
+
+        // Log current user info for debugging
+        const currentUser = authService.getCurrentUser();
+        console.log('Current user:', currentUser);
+
+        // Call the delete user endpoint
+        await authService.deleteUser();
+        
+        // Show success message before redirect
+        alert('Your account has been successfully deleted.');
+        
+        // On successful deletion, user is already logged out by authService
+        // Redirect to home page
+        this.$router.push('/');
+      } catch (error) {
+        console.error('Error deleting account:', error);
+        // Show error message to user
+        alert('Failed to delete account. Please try again.');
+      } finally {
+        this.loading = false;
+      }
     },
     handleLike(postId) {
       console.log('Liking post:', postId);

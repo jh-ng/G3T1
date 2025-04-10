@@ -323,5 +323,46 @@ def delete_post_social_data():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/social/user/<user_id>', methods=['DELETE'])
+def delete_user_social_data(user_id):
+    print(f"\n=== Starting deletion of social data for user {user_id} ===")
+    
+    # Verify JWT token
+    token = request.headers.get('Authorization', '').split(' ')[-1]
+    payload = verify_token(token)
+    if not payload:
+        print("Invalid or missing token")
+        return jsonify({'error': 'Invalid or missing token'}), 401
+
+    # Check if the authenticated user matches the requested user_id
+    if str(payload.get('user_id')) != str(user_id):
+        print("User is not authorized to delete this data")
+        return jsonify({'error': 'Unauthorized to delete this data'}), 403
+
+    try:
+        # Delete all likes by the user
+        print(f"Deleting likes for user {user_id}")
+        likes_result = supabase.table("likes").delete().eq("liked_by_user_id", user_id).execute()
+        print(f"Likes deletion result: {likes_result}")
+
+        # Delete all comments by the user
+        print(f"Deleting comments for user {user_id}")
+        comments_result = supabase.table("comments").delete().eq("user_id", user_id).execute()
+        print(f"Comments deletion result: {comments_result}")
+
+        return jsonify({
+            'message': 'User social data deleted successfully',
+            'details': {
+                'likes_deleted': len(likes_result.data) if likes_result.data else 0,
+                'comments_deleted': len(comments_result.data) if comments_result.data else 0
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"Error deleting user social data: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5003)

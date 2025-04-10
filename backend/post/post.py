@@ -343,5 +343,45 @@ def delete_post():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+# Delete all posts for a user
+@app.route('/api/posts/user/<user_id>', methods=['DELETE'])
+def delete_user_posts(user_id):
+    print(f"\n=== Starting delete_user_posts request for user {user_id} ===")
+    
+    # Verify JWT token
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        print("No token provided")
+        return jsonify({'error': 'No token provided'}), 401
+    
+    token = auth_header.split(' ')[1]
+    payload = verify_token(token)
+    print("JWT Payload:", payload)
+    
+    if not payload:
+        print("Invalid or expired token")
+        return jsonify({'error': 'Invalid or expired token'}), 401
+
+    # Check if the authenticated user matches the requested user_id
+    if str(payload.get('user_id')) != str(user_id):
+        print("User is not authorized to delete these posts")
+        return jsonify({'error': 'Unauthorized to delete these posts'}), 403
+
+    try:
+        # Delete all posts for the user
+        print(f"Deleting all posts for user {user_id}")
+        result = supabase.table(POSTS_TABLE).delete().eq('user_id', user_id).execute()
+        
+        print(f"Deletion result: {result}")
+        return jsonify({
+            'message': 'All posts deleted successfully'
+        }), 200
+        
+    except Exception as e:
+        print(f"Error deleting posts: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
