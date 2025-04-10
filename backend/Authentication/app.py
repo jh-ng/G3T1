@@ -361,7 +361,7 @@ def delete_user(user_id):
         return jsonify({"error": f"Error deleting user from auth database: {str(e)}"}), 500
 
 # Add this new endpoint to update is_first_login status
-@app.route('/api/auth/update-first-login', methods=['POST'])
+@app.route('/api/auth/update-first-login', methods=['PUT'])
 @token_required
 def update_first_login():
     try:
