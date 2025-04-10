@@ -37,7 +37,11 @@
             v-model="form.diet"
             :options="dietOptions"
             placeholder="Select dietary restriction"
+            :multiple="true"
             :max="1"
+            :hideSelected="true"
+            @select="val => form.diet = [val]"
+            @remove="() => form.diet = []"
             :class="{ 'required-warning': triedSubmit && !form.diet.length }"
           />
         </div>
@@ -160,11 +164,6 @@
     watch: {
       startHour() {
         this.updateStartTime()
-        // Reset end time if the selected endHour is no longer valid.
-        if (this.endHour !== '' && Number(this.endHour) <= Number(this.startHour)) {
-          this.endHour = '';
-          this.endMinute = '';
-        }
       },
       startMinute() {
         this.updateStartTime()
@@ -174,6 +173,18 @@
       },
       endMinute() {
         this.updateEndTime()
+      },
+      'form.diet': {
+        handler(newVal) {
+          // Ensure diet is always an array with max 1 item
+          if (!Array.isArray(newVal)) {
+            this.form.diet = newVal ? [newVal] : [];
+          } else if (newVal.length > 1) {
+            // Keep only the most recently added item
+            this.form.diet = [newVal[newVal.length - 1]];
+          }
+        },
+        immediate: true
       }
     },
     methods: {
