@@ -130,10 +130,10 @@
         triedSubmit: false,
         travelStyles: [
           'Adventure',
-          'Relaxation',
-          'Cultural',
+          'Solo',
+          'Family',
           'Shopping',
-          'Food'
+          'Relaxation'
         ],
         touristSites: [
           'Nature Sites',
