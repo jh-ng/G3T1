@@ -62,18 +62,12 @@
       style="height: 100vh; display: flex; flex-direction: column"
     >
       <v-list>
-        <v-list-item to="/home" title="Home"></v-list-item>
-        <v-list-item to="/travel-planner" title="Travel Planner"></v-list-item>
-        <v-list-item
-          to="/saved-itineraries"
-          prepend-icon="mdi-book-open-variant"
-        >
+        <v-list-item to="/home" title="Home" prepend-icon="mdi-home"></v-list-item>
+        <v-list-item to="/travel-planner" title="Travel Planner" prepend-icon="mdi-map-marker-path"></v-list-item>
+        <v-list-item to="/saved-itineraries" prepend-icon="mdi-book-open-variant">
           Saved Itineraries
         </v-list-item>
-        <v-list-item
-          to="/preferences-editor"
-          title="User Preferences"
-        ></v-list-item>
+        <v-list-item to="/preferences-editor" title="User Preferences" prepend-icon="mdi-cog"></v-list-item>
       </v-list>
       <v-divider></v-divider>
       <v-spacer></v-spacer>
