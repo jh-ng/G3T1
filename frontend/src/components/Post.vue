@@ -51,7 +51,7 @@
     <!-- Post Content -->
     <div class="post-content text-left">
       <span class="username">{{ displayUsername }}</span>
-      <span class="post-text">{{ post.title }}</span>
+      <span class="post-text">{{ post.content }}</span>
     </div>
 
     <!-- Tags moved and aligned left -->
@@ -830,8 +830,8 @@ export default {
 
 .post-title {
   margin-right: 10px;
-  font-size: 1.2em;
-  font-weight: bold;
+  font-size: 1.0em;
+  font-weight: medium;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
   /* color: #2c3e50; */
   font-family: 'Montserrat', sans-serif;
