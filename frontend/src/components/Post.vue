@@ -5,14 +5,16 @@
       <router-link :to="'/user/' + post.user_id" class="username">
         {{ displayUsername }}
       </router-link>
-      <div
-        v-if="post.title"
-        class="post-title text-lg font-semibold text-gray-800"
-      >
-        {{ post.title }}
-      </div>
-      <div v-if="post.location" class="post-location text-gray-500 text-sm">
-        📍 {{ simplifiedLocation }}
+      <div class="title-location-container">
+        <div
+          v-if="post.title"
+          class="post-title text-lg font-semibold text-gray-800"
+        >
+          {{ post.title }}
+        </div>
+        <div v-if="post.location" class="post-location text-gray-500 text-sm">
+          📍 {{ simplifiedLocation }}
+        </div>
       </div>
     </div>
 
@@ -261,7 +263,7 @@ export default {
       required: true,
     },
   },
-  
+
   setup(props) {
     const hasLiked = ref(false);
     const likesCount = ref(0);
@@ -303,7 +305,7 @@ export default {
         console.error("Error fetching likes:", error);
       }
     };
-  
+
     const fetchComments = async () => {
       try {
         const token = authService.getToken();
@@ -376,7 +378,7 @@ export default {
       replyingTo.value = {
         ...comment,
         user_id: comment.user_id,
-        username: comment.username
+        username: comment.username,
       };
 
       parentComment.value = parent || comment;
@@ -395,34 +397,34 @@ export default {
         const token = authService.getToken();
         const commentData = {
           post_id: props.post.id,
-          comment: newComment.value.replace(/^@\w+\s+/, ''), // Remove the @mention from the comment text
+          comment: newComment.value.replace(/^@\w+\s+/, ""), // Remove the @mention from the comment text
           parent_comment_id: replyingTo.value ? parentComment.value.id : null,
-          reply_to_user_id: replyingTo.value ? replyingTo.value.user_id : null
+          reply_to_user_id: replyingTo.value ? replyingTo.value.user_id : null,
         };
 
         const response = await fetch(`${API_BASE_URL}/api/social/comment`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify(commentData)
+          body: JSON.stringify(commentData),
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to post comment');
+          throw new Error(errorData.error || "Failed to post comment");
         }
 
         // Clear input and reset reply state
-        newComment.value = '';
+        newComment.value = "";
         replyingTo.value = null;
         parentComment.value = null;
 
         // Refresh comments
         await fetchComments();
       } catch (error) {
-        console.error('Error posting comment:', error);
+        console.error("Error posting comment:", error);
       } finally {
         isSubmitting.value = false;
       }
@@ -510,7 +512,9 @@ export default {
         }
         return acc;
       }, []);
-      const replyToUser = allComments.find(c => c.user_id === reply.reply_to_user_id);
+      const replyToUser = allComments.find(
+        (c) => c.user_id === reply.reply_to_user_id
+      );
       return replyToUser ? replyToUser.username : null;
     };
 
@@ -538,7 +542,7 @@ export default {
       replyToComment,
       formatTime,
       openComments,
-      getUsernameForReply
+      getUsernameForReply,
     };
   },
 };
@@ -562,8 +566,11 @@ export default {
 
 .post-image {
   width: 100%;
-  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  object-position: center;
   display: block;
+  background-color: #f0f0f0;
 }
 
 .post-actions {
@@ -605,6 +612,7 @@ export default {
   text-decoration: none;
   color: #262626;
   margin-right: 6px;
+  margin-bottom: 10px;
 }
 
 .view-comments-link {
@@ -807,5 +815,26 @@ export default {
 .tag-link:hover {
   color: #1a91da;
   text-decoration: underline;
+}
+.post-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.title-location-container {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between; 
+  width: 100%; 
+}
+
+.post-title {
+  margin-right: 10px;
+  font-size: 1.2em;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  /* color: #2c3e50; */
+  font-family: 'Montserrat', sans-serif;
 }
 </style>
