@@ -830,8 +830,8 @@ export default {
 
 .post-title {
   margin-right: 10px;
-  font-size: 1.0em;
-  font-weight: medium;
+  font-size: 1.25em;
+  font-weight: bold;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
   /* color: #2c3e50; */
   font-family: 'Montserrat', sans-serif;
