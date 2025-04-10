@@ -238,19 +238,123 @@ def delete_user(user_id):
         return jsonify({"error": "Unauthorized access"}), 403
     
     try:
-        # Check if user exists
-        check_result = supabase.table(AUTHENTICATION_TABLE).select("*").eq("id", user_id).execute()
+        print(f"Attempting to delete user ID: {user_id} (type: {type(user_id)})")
+        
+        # Convert user_id to int if it's a string to match database type
+        user_id_int = int(user_id) if isinstance(user_id, str) and user_id.isdigit() else user_id
+        print(f"Converted user ID: {user_id_int} (type: {type(user_id_int)})")
+
+        # First check if user exists in auth database
+        check_result = supabase.table(AUTHENTICATION_TABLE).select("*").eq("id", user_id_int).execute()
+        print(f"Check result: {check_result.data}")
         
         if len(check_result.data) == 0:
             return jsonify({"error": "User not found in auth database"}), 404
+
+        # Get auth header for subsequent service calls
+        auth_header = request.headers.get('Authorization')
+
+        # Initialize response variables
+        user_service_response = None
+        itinerary_service_response = None
+        social_service_response = None
+        posts_service_response = None
+
+        # Delete user from User service
+        try:
+            user_service_response = requests.delete(
+                f"{KONG_URL}/api/user/{user_id}",
+                headers={"Authorization": auth_header}
+            )
+            print(f"User service deletion response: {user_service_response.status_code} - {user_service_response.text}")
+        except Exception as e:
+            print(f"Error deleting user profile: {str(e)}")
+
+        # Delete user's itineraries
+        try:
+            itinerary_service_response = requests.delete(
+                f"{KONG_URL}/api/itineraries/{user_id}/all",
+                headers={"Authorization": auth_header}
+            )
+            print(f"Itinerary service deletion response: {itinerary_service_response.status_code} - {itinerary_service_response.text}")
+        except Exception as e:
+            print(f"Error deleting user itineraries: {str(e)}")
         
-        # Delete user from auth database
-        result = supabase.table(AUTHENTICATION_TABLE).delete().eq("id", user_id).execute()
+        # Delete user's social data (likes and comments)
+        try:
+            social_service_response = requests.delete(
+                f"{KONG_URL}/api/social/user/{user_id}",
+                headers={"Authorization": auth_header}
+            )
+            print(f"Social service deletion response: {social_service_response.status_code} - {social_service_response.text}")
+        except Exception as e:
+            print(f"Error deleting user social data: {str(e)}")
+
+        # Delete user posts
+        try:
+            posts_service_response = requests.delete(
+                f"{KONG_URL}/api/posts/user/{user_id}",
+                headers={"Authorization": auth_header}
+            )
+            print(f"Posts service deletion response: {posts_service_response.status_code} - {posts_service_response.text}")
+        except Exception as e:
+            print(f"Error deleting user posts: {str(e)}")
+        # Store all service responses with detailed status
+        service_responses = {}
+        service_failures = []
+
+        # Check User service
+        if user_service_response is not None:
+            service_responses["user_service"] = user_service_response.status_code
+            if user_service_response.status_code not in [200, 204]:
+                service_failures.append(f"user_service ({user_service_response.status_code})")
+        else:
+            service_responses["user_service"] = "unreachable"
+
+        # Check Itinerary service
+        if itinerary_service_response is not None:
+            service_responses["itinerary_service"] = itinerary_service_response.status_code
+            if itinerary_service_response.status_code not in [200, 204]:
+                service_failures.append(f"itinerary_service ({itinerary_service_response.status_code})")
+        else:
+            service_responses["itinerary_service"] = "unreachable"
+
+        # Check Social service
+        if social_service_response is not None:
+            service_responses["social_service"] = social_service_response.status_code
+            if social_service_response.status_code not in [200, 204]:
+                service_failures.append(f"social_service ({social_service_response.status_code})")
+        else:
+            service_responses["social_service"] = "unreachable"
+
+        # Check Posts service
+        if posts_service_response is not None:
+            service_responses["posts_service"] = posts_service_response.status_code
+            if posts_service_response.status_code not in [200, 204]:
+                service_failures.append(f"posts_service ({posts_service_response.status_code})")
+        else:
+            service_responses["posts_service"] = "unreachable"
+
+        if service_failures:
+            error_msg = f"Failed to delete from services: {', '.join(service_failures)}"
+            print(error_msg)
+            return jsonify({"error": error_msg, "service_status": service_responses}), 500
+
+        # All services processed, now delete from auth database
+        result = supabase.table(AUTHENTICATION_TABLE).delete().eq("id", user_id_int).execute()
+        print(f"Auth database delete result: {result.data}")
         
-        if len(result.data) == 0:
+        if not result.data or len(result.data) == 0:
             return jsonify({"error": "Failed to delete user from auth database"}), 500
         
-        return jsonify({"message": "User deleted successfully from auth database"}), 200
+        # Return success with detailed status
+        return jsonify({
+            "message": "User and related data deleted successfully",
+            "details": {
+                "auth": "deleted",
+                "services": service_responses
+            }
+        }), 200
         
     except Exception as e:
         print(f"Error deleting user from auth database: {str(e)}")

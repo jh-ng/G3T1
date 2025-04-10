@@ -420,6 +420,46 @@ app.delete('/api/itineraries/:id', authenticateJWT, async (req, res) => {
   }
 });
 
+// Delete all itineraries for a user
+app.delete('/api/itineraries/:userID/all', authenticateJWT, async (req, res) => {
+  try {
+    const { userID } = req.params;
+
+    // Convert both IDs to strings for comparison since they might be different types
+    if (String(userID) !== String(req.user.user_id)) {
+      return res.status(403).json({
+        error: 'Unauthorized: Cannot delete itineraries for other users'
+      });
+    }
+
+    console.log(`Attempting to delete all itineraries for user: ${userID}`);
+    
+    // Delete all itineraries for the user
+    const { error: deleteError } = await supabase
+      .from(ITINERARIES_TABLE)
+      .delete()
+      .eq('userID', userID);
+    
+    if (deleteError) {
+      console.error('Error deleting itineraries:', deleteError);
+      return res.status(500).json({
+        error: 'Failed to delete itineraries',
+        details: deleteError
+      });
+    }
+    
+    return res.status(200).json({
+      message: 'All itineraries deleted successfully'
+    });
+  } catch (error) {
+    console.error('Server error:', error);
+    return res.status(500).json({
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
 // Test endpoint for Supabase connection
 app.get('/api/test-db', async (req, res) => {
   try {
