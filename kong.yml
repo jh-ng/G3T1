@@ -40,7 +40,7 @@ services:
           - /api/auth/update-first-login$
         strip_path: false
         methods:
-          - POST
+          - PUT
           - OPTIONS
 
   - name: post-service

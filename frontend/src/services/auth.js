@@ -148,7 +148,7 @@ class AuthService {
 
   async updateFirstLoginStatus() {
     try {
-      const response = await axios.post(`${API_URL}/update-first-login`);
+      const response = await axios.put(`${API_URL}/update-first-login`);
       
       if (response.data) {
         const user = this.getCurrentUser();
