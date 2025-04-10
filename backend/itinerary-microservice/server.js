@@ -66,7 +66,7 @@ app.post('/api/itineraries', authenticateJWT, async (req, res) => {
     
     const itineraryData = {
       userID: req.user.user_id,
-      travelDestination: travelDetails.destination,
+      travelDestination: travelDetails.destination || travelDetails.travelDestination || travelDetails.travel_destination || travelDetails.destinationName,
       startDate: travelDetails.startDate || travelDetails.start_date,
       endDate: travelDetails.endDate || travelDetails.end_date,
       travellers: travelDetails.numTravelers || travelDetails.number_of_travelers,

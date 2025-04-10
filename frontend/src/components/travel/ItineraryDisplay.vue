@@ -6,7 +6,7 @@
         <v-card class="mb-6 travel-details-card">
           <v-card-title class="text-h5 text-center destination-title">
             <v-icon color="white" size="32" class="destination-icon mr-2">mdi-map-marker</v-icon>
-            {{ itineraryData?.travelDetails?.destination || 'Travel Details' }}
+            {{ travelDetails.destination }}
           </v-card-title>
           <v-card-text>
             <div class="travel-details-container">
@@ -199,8 +199,8 @@ export default {
         return {
           number_of_travelers: 0,
           budget: '-',
-          start_date: '-',
-          end_date: '-',
+          start_date: null,
+          end_date: null,
           daily_start_time: '-',
           daily_end_time: '-',
           destination: 'Travel Details'
@@ -218,8 +218,8 @@ export default {
       return {
         number_of_travelers: details.numberOfTravelers || details.number_of_travelers || 0,
         budget: details.budget || '-',
-        start_date: details.startDate || details.start_date || '-',
-        end_date: details.endDate || details.end_date || '-',
+        start_date: details.startDate || details.start_date || null,
+        end_date: details.endDate || details.end_date || null,
         daily_start_time: details.dailyStartTime || details.start_time || details.daily_start_time || '-',
         daily_end_time: details.dailyEndTime || details.end_time || details.daily_end_time || '-',
         destination: details.destination || details.travelDestination || details.travel_destination || details.destinationName || 'Travel Details'
@@ -262,23 +262,28 @@ export default {
       try {
         console.log("Generating date range from travel details:", JSON.stringify(travelDetails.value));
         
-        // Parse start date
+        // Get dates from travel details
         const startDateStr = travelDetails.value.start_date;
-        const startDate = parseCorrectDate(startDateStr);
-        
-        // Parse end date
         const endDateStr = travelDetails.value.end_date;
+
+        // If no dates are provided, return empty array
+        if (!startDateStr || !endDateStr) {
+          console.log("No dates provided");
+          return [];
+        }
+
+        const startDate = parseCorrectDate(startDateStr);
         const endDate = parseCorrectDate(endDateStr);
         
         if (!startDate || !endDate) {
           console.error("Failed to parse dates:", startDateStr, endDateStr);
-          return [travelDetails.value.start_date];
+          return [];
         }
         
         // Ensure endDate is after or equal to startDate
         if (endDate < startDate) {
           console.error("End date is before start date");
-          return [travelDetails.value.start_date];
+          return [];
         }
         
         // Generate all dates in the range (inclusive of end date)
@@ -632,13 +637,13 @@ export default {
     }
 
     // Helper to format dates for display in day tabs
-    const formatTabDate = (dateStr) => {
+    const formatTabDate = (dateString) => {
       try {
         // Force parsing as UTC
-        if (!dateStr) return { weekday: 'Day', day: '??' };
+        if (!dateString) return { weekday: 'Day', day: '??' };
         
         // Add time component to ensure we're parsing in UTC
-        const dateWithTime = dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00Z`;
+        const dateWithTime = dateString.includes('T') ? dateString : `${dateString}T12:00:00Z`;
         
         // Create date with explicit UTC time
         const date = new Date(dateWithTime);
@@ -655,8 +660,8 @@ export default {
           })
         }
       } catch (error) {
-        console.error('Error formatting tab date:', error, dateStr);
-        return { weekday: 'Day', day: dateStr.split('-')[2] || '?' }
+        console.error('Error formatting tab date:', error, dateString);
+        return { weekday: 'Day', day: dateString.split('-')[2] || '?' }
       }
     }
 
@@ -852,6 +857,8 @@ export default {
         const itineraryObj = props.itineraryData.itinerary || props.itineraryData
         let travelDetailsObj = props.itineraryData.travelDetails || travelDetails.value
         
+        console.log('Original travelDetailsObj:', travelDetailsObj)
+        
         // Make sure travelDetails has all the required properties correctly named
         travelDetailsObj = {
           destination: travelDetailsObj.destination || travelDetailsObj.travelDestination || travelDetailsObj.travel_destination || travelDetailsObj.destinationName,
@@ -862,6 +869,8 @@ export default {
           dailyStartTime: travelDetailsObj.dailyStartTime || travelDetailsObj.daily_start_time,
           dailyEndTime: travelDetailsObj.dailyEndTime || travelDetailsObj.daily_end_time
         }
+        
+        console.log('Processed travelDetailsObj:', travelDetailsObj)
         
         await itineraryService.saveItinerary(itineraryObj, travelDetailsObj)
         saveSuccess.value = true
