@@ -2,7 +2,7 @@
   <div class="post">
     <!-- Post Header -->
     <div class="post-header">
-      <router-link :to="'/user/' + post.user_id" class="username">
+      <router-link :to="getUserProfileRoute(post.user_id, post.username)" class="username">
         {{ displayUsername }}
       </router-link>
       <div
@@ -112,7 +112,7 @@
           <div class="dialog-comments-container">
             <!-- Post Header -->
             <div class="dialog-header">
-              <router-link :to="'/user/' + post.user_id" class="username">
+              <router-link :to="getUserProfileRoute(post.user_id, post.username)" class="username">
                 {{ displayUsername }}
               </router-link>
             </div>
@@ -121,7 +121,7 @@
             <div class="comments-list">
               <!-- Original Post -->
               <div class="original-post-content">
-                <router-link :to="'/user/' + post.user_id" class="username">
+                <router-link :to="getUserProfileRoute(post.user_id, post.username)" class="username">
                   {{ displayUsername }}
                 </router-link>
                 <span class="post-text">{{ post.title }}</span>
@@ -135,10 +135,7 @@
               >
                 <!-- Parent Comment -->
                 <div class="parent-comment">
-                  <router-link
-                    :to="'/user/' + comment.user_id"
-                    class="username"
-                  >
+                  <router-link :to="getUserProfileRoute(comment.user_id, comment.username)" class="username">
                     {{ comment.username }}
                   </router-link>
                   <span class="comment-text">{{ comment.comment_text }}</span>
@@ -167,18 +164,12 @@
                   >
                     <div class="reply-content">
                       <div>
-                        <router-link
-                          :to="'/user/' + reply.user_id"
-                          class="username"
-                        >
+                        <router-link :to="getUserProfileRoute(reply.user_id, reply.username)" class="username">
                           {{ reply.username }}
                         </router-link>
                         <span class="reply-text">
                           <template v-if="reply.reply_to_user_id">
-                            <router-link
-                              :to="'/user/' + reply.reply_to_user_id"
-                              class="mention"
-                            >
+                            <router-link :to="getUserProfileRoute(reply.reply_to_user_id, getUsernameForReply(reply))" class="mention">
                               @{{ getUsernameForReply(reply) }}
                             </router-link>
                             {{ reply.comment_text }}
@@ -234,7 +225,7 @@
 
 <script>
 import { ref, onMounted, computed } from "vue";
-import authService from "@/services/auth";
+import authService from "@/services/auth"; // Added import for authService
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faHeart, faComment } from "@fortawesome/free-solid-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -514,6 +505,13 @@ export default {
       return replyToUser ? replyToUser.username : null;
     };
 
+    const getUserProfileRoute = (userId, username) => {
+      const currentUser = authService.getCurrentUser();
+      return currentUser && currentUser.id === parseInt(userId) 
+        ? `/user/${userId}` 
+        : `/profile/${userId}?username=${encodeURIComponent(username)}`;
+    };
+
     onMounted(() => {
       fetchLikes();
       fetchComments();
@@ -538,7 +536,8 @@ export default {
       replyToComment,
       formatTime,
       openComments,
-      getUsernameForReply
+      getUsernameForReply,
+      getUserProfileRoute
     };
   },
 };
