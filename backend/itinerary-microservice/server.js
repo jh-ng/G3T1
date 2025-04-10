@@ -66,7 +66,8 @@ app.post('/api/itineraries', authenticateJWT, async (req, res) => {
     
     const itineraryData = {
       userID: req.user.user_id,
-      travelDestination: travelDetails.destination || travelDetails.travelDestination || travelDetails.travel_destination || travelDetails.destinationName,
+      // Store the destination exactly as received without fallbacks
+      travelDestination: travelDetails.destination,
       startDate: travelDetails.startDate || travelDetails.start_date,
       endDate: travelDetails.endDate || travelDetails.end_date,
       travellers: travelDetails.numTravelers || travelDetails.number_of_travelers,
@@ -174,27 +175,35 @@ app.get('/api/itineraries/:id', authenticateJWT, async (req, res) => {
       hasGeminiResponse: !!data.geminiResponse
     });
     
-    // Log the structure of geminiResponse to understand its format
+    // Parse the geminiResponse to get the original itinerary and travel details
+    let parsedGeminiResponse = {};
     if (data.geminiResponse) {
       try {
-        const parsedResponse = JSON.parse(data.geminiResponse);
-        console.log('GeminiResponse structure:', {
-          keys: Object.keys(parsedResponse),
-          hasItinerary: !!parsedResponse.itinerary,
-          itineraryType: parsedResponse.itinerary ? (Array.isArray(parsedResponse.itinerary) ? 'array' : typeof parsedResponse.itinerary) : 'none',
-          hasTravelDetails: !!parsedResponse.travelDetails,
-          sampleItineraryKeys: parsedResponse.itinerary && Array.isArray(parsedResponse.itinerary) && parsedResponse.itinerary.length > 0 
-            ? Object.keys(parsedResponse.itinerary[0]) 
-            : []
-        });
+        parsedGeminiResponse = JSON.parse(data.geminiResponse);
       } catch (parseError) {
         console.error('Error parsing geminiResponse:', parseError);
       }
     }
-    
+
+    // Construct the response with both database fields and gemini response
+    const responseData = {
+      ...data,
+      travelDetails: {
+        // Return the full destination as stored
+        destination: data.travelDestination,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        numberOfTravelers: data.travellers,
+        budget: data.budget,
+        dailyStartTime: data.dailyStartTime,
+        dailyEndTime: data.dailyEndTime
+      },
+      itinerary: parsedGeminiResponse.itinerary || []
+    };
+
     return res.status(200).json({
       message: 'Itinerary fetched successfully',
-      itinerary: data
+      itinerary: responseData
     });
   } catch (error) {
     console.error('Server error:', error);

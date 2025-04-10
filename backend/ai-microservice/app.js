@@ -381,8 +381,16 @@ const generateGeminiPrompt = (preferences, locationData, tripDetails) => {
     Available Places:
     ${JSON.stringify(locationData, null, 2)}
 
-    CRITICAL REQUIREMENT:
-    - The response MUST be in valid JSON format. This is the MOST important requirement and cannot be compromised under any circumstances.
+    CRITICAL REQUIREMENTS:
+    1. The response MUST be in valid JSON format. This is the MOST important requirement.
+    2. The response MUST include a 'travelDetails' object with ALL the following fields:
+       - destination: MUST be exactly "${tripDetails.destination}" (preserve this exact destination string)
+       - number_of_travelers: ${tripDetails.numTravelers}
+       - budget: ${preferences.budget}
+       - start_date: "${tripDetails.startDate}"
+       - end_date: "${tripDetails.endDate}"
+       - daily_start_time: "${preferences.startTime}"
+       - daily_end_time: "${preferences.endTime}"
 
     Important Requirements:
     - Please create a FULL-DAY itinerary for each day, including the last day. The last day should NOT be treated as a departure day.
