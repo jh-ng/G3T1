@@ -292,6 +292,76 @@ class AuthService {
       }
     }
   }
+
+  async deleteUser() {
+    try {
+      const tokenInfo = this.getTokenInfo();
+      if (!tokenInfo || !tokenInfo.user_id) {
+        throw new Error('Invalid token or user ID not found');
+      }
+
+      const userId = tokenInfo.user_id;
+      console.log('Attempting to delete user:', userId);
+
+      // 1. Delete all itineraries
+      console.log('Deleting itineraries...');
+      try {
+        await axios.delete(`${USER_API_URL}/itineraries/${userId}/all`);
+        console.log('Itineraries deleted successfully');
+      } catch (error) {
+        console.error('Error deleting itineraries:', error);
+      }
+
+      // 2. Delete all social interactions (likes and comments)
+      console.log('Deleting social interactions...');
+      try {
+        await axios.delete(`${USER_API_URL}/social/user/${userId}`);
+        console.log('Social interactions deleted successfully');
+      } catch (error) {
+        console.error('Error deleting social interactions:', error);
+      }
+
+      // 3. Delete all posts
+      console.log('Deleting posts...');
+      try {
+        await axios.delete(`${USER_API_URL}/posts/user/${userId}`);
+        console.log('Posts deleted successfully');
+      } catch (error) {
+        console.error('Error deleting posts:', error);
+      }
+
+      // 4. Delete user profile
+      console.log('Deleting user profile...');
+      try {
+        await axios.delete(`${USER_API_URL}/user/${userId}`);
+        console.log('User profile deleted successfully');
+      } catch (error) {
+        console.error('Error deleting user profile:', error);
+      }
+
+      // 5. Finally, delete authentication record
+      console.log('Deleting authentication record...');
+      const response = await axios.delete(`${API_URL}/user/${userId}`);
+      
+      console.log('Delete authentication response:', response);
+      
+      if (response.status === 200) {
+        // Clear local storage and log out
+        this.logout();
+        return true;
+      }
+
+      // If we get here, something went wrong
+      throw new Error('Failed to delete user account');
+    } catch (error) {
+      console.error('Error in delete process:', error);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
+      throw error;
+    }
+  }
 }
 
 export default new AuthService();

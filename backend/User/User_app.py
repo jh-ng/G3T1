@@ -189,20 +189,7 @@ def delete_user(user_id):
             return jsonify({"error": "Failed to delete user from user service"}), 500
         
         # After successful deletion from user service, request deletion from auth service through Kong
-        try:
-            auth_header = request.headers.get('Authorization')
-            auth_service_response = requests.delete(
-                f"{KONG_URL}/api/auth/user/{user_id}",
-                headers={"Authorization": auth_header}
-            )
-            
-            # Log the auth service response but continue regardless
-            logger.info(f"Auth service deletion response: {auth_service_response.status_code} - {auth_service_response.text}")
-            
-            # Return success even if auth deletion fails, since that should be handled separately
-            # and not block the user deletion in the user service
-        except Exception as e:
-            logger.error(f"Error communicating with auth service for user deletion: {str(e)}")
+        # Only handle user profile deletion
         
         return jsonify({"message": "User deleted successfully"}), 200
         
