@@ -36,7 +36,8 @@
         v-model="form.diet"
         :options="dietOptions"
         placeholder="Select dietary restriction"
-        :class="{ 'required-warning': triedSubmit && !form.diet }"
+        :max="1"
+        :class="{ 'required-warning': triedSubmit && !form.diet.length }"
       />
     </div>
 
@@ -113,7 +114,7 @@ export default {
     const form = reactive({
       travel_style: [],
       tourist_sites: [],
-      diet: '',
+      diet: [],  
       start_time: '',
       end_time: ''
     });
@@ -167,7 +168,7 @@ export default {
         if (preferences) {
           form.travel_style = preferences.travel_style || [];
           form.tourist_sites = preferences.tourist_sites || [];
-          form.diet = preferences.diet || '';
+          form.diet = preferences.diet || [];
           
           if (preferences.start_time) {
             const [hour, minute] = preferences.start_time.split(':');
@@ -193,7 +194,7 @@ export default {
       if (
         !form.travel_style.length ||
         !form.tourist_sites.length ||
-        !form.diet ||
+        !form.diet.length ||
         !form.start_time ||
         !form.end_time
       ) {
