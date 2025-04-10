@@ -170,38 +170,6 @@ def update_taste_preferences(user_id):
         logger.error(f"Error updating taste preferences: {str(e)}")
         return jsonify({"error": f"Error updating taste preferences: {str(e)}"}), 500
 
-# update user profile
-@app.route("/api/user/<user_id>", methods=["PUT"])
-@token_required
-def update_user(user_id):
-    # Check if the user is updating their own profile
-    if user_id != str(request.user["user_id"]):
-        return jsonify({"error": "Unauthorized access"}), 403
-    
-    data = request.json
-    if not data:
-        return jsonify({"error": "No update data provided"}), 400
-    
-    try:
-        check_result = supabase.table(USER_TABLE).select("*").eq("userId", user_id).execute()
-        
-        if len(check_result.data) == 0:
-            return jsonify({"error": "User not found"}), 404
-        
-        data["updated_at"] = datetime.now().isoformat()
-        if "userId" in data:
-            del data["userId"]
-            
-        result = supabase.table(USER_TABLE).update(data).eq("userId", user_id).execute()
-        
-        if len(result.data) == 0:
-            return jsonify({"error": "Failed to update user"}), 500
-            
-        return jsonify({"message": "User updated successfully", "user": result.data[0]}), 200
-        
-    except Exception as e:
-        logger.error(f"Error updating user: {str(e)}")
-        return jsonify({"error": f"Error updating user: {str(e)}"}), 500
 
 # delete user account
 @app.route("/api/user/<user_id>", methods=["DELETE"])
@@ -225,20 +193,7 @@ def delete_user(user_id):
             return jsonify({"error": "Failed to delete user from user service"}), 500
         
         # After successful deletion from user service, request deletion from auth service through Kong
-        try:
-            auth_header = request.headers.get('Authorization')
-            auth_service_response = requests.delete(
-                f"{KONG_URL}/api/auth/user/{user_id}",
-                headers={"Authorization": auth_header}
-            )
-            
-            # Log the auth service response but continue regardless
-            logger.info(f"Auth service deletion response: {auth_service_response.status_code} - {auth_service_response.text}")
-            
-            # Return success even if auth deletion fails, since that should be handled separately
-            # and not block the user deletion in the user service
-        except Exception as e:
-            logger.error(f"Error communicating with auth service for user deletion: {str(e)}")
+        # Only handle user profile deletion
         
         return jsonify({"message": "User deleted successfully"}), 200
         

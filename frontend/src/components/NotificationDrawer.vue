@@ -33,7 +33,8 @@
 
         <div class="notification-content">
           <!-- <v-list-item-title class="notification-title">{{ getTitle(notification) }}</v-list-item-title> -->
-          <v-list-item-subtitle class="notification-message">{{ notification.Message }}</v-list-item-subtitle>
+          <v-list-item-subtitle class="notification-message"
+            v-html="truncateMessage(notification.Message)"></v-list-item-subtitle>
           <div class="notification-time">
             {{ formatTime(notification.CreatedOn) }}
           </div>
@@ -52,6 +53,7 @@
 import { ref, watch, defineProps, defineEmits } from 'vue';
 import notificationService from '@/services/notificationService';
 
+
 const props = defineProps({ show: Boolean });
 const emit = defineEmits(['close']);
 const isOpen = ref(props.show);
@@ -69,7 +71,35 @@ const notifications = notificationService.notifications;
 const unreadCount = notificationService.unreadCount;
 
 const markAsRead = async (id) => {
-  await notificationService.markAsRead(id);
+  try {
+    const notification = notifications.value.find(n => n.Id === id);
+    if (!notification) return;
+    
+    const postId = notification.PostId;
+    
+    emitClose();
+
+    await notificationService.markAsRead(id);
+    
+    if (postId) {
+      window.location.href = `/home?scrollToPost=${postId}`;
+    }
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
+};
+
+const truncateMessage = (message) => {
+  if (!message) return '';
+  if (message.includes(':') && message.length > 30) {
+    const parts = message.split(':', 2);
+    const secondPart = parts[1].trim();
+    const truncatedSecondPart = secondPart.length > 35
+      ? secondPart.substring(0, 35) + '...'
+      : secondPart;
+    return parts[0] + ':<br>' + truncatedSecondPart;
+  }
+  return message;
 };
 
 const markAllAsRead = async () => {
@@ -130,8 +160,15 @@ const getNotificationIcon = (notification) => {
 .notification-message {
   font-size: 0.875rem;
   color: rgba(0, 0, 0, 0.6);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   text-align: left;
+  line-height: 1.3;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+
 }
 
 .notification-time {

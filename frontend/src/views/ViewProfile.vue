@@ -4,7 +4,7 @@
       <v-row>
         <v-col cols="12" class="text-center">
           <h2 class="text-h4 mb-2">
-            {{ isOwnProfile ? 'Your Profile' : (username || `User ${userId}`) }}
+            {{ isOwnProfile ? 'Your Profile' : username }}
           </h2>
           <p class="text-subtitle-1">{{ posts.length }} {{ posts.length === 1 ? 'post' : 'posts' }}</p>
         </v-col>
@@ -16,7 +16,7 @@
         </v-col>
       </v-row>
 
-      <v-row v-else-if="error">
+      <v-row v-else-if="error === 'User not found'">
         <v-col cols="12" class="text-center">
           <v-alert type="error">{{ error }}</v-alert>
         </v-col>
@@ -24,7 +24,9 @@
 
       <v-row v-else-if="posts.length === 0">
         <v-col cols="12" class="text-center">
-          <v-alert type="info">No posts yet</v-alert>
+          <v-alert type="info" class="no-posts-alert">
+            This user hasn't posted anything yet
+          </v-alert>
         </v-col>
       </v-row>
 
@@ -98,7 +100,7 @@ import authService from '@/services/auth';
 import defaultAvatar from '@/assets/opm.jpg';
 
 export default {
-  name: 'UserProfile',
+  name: 'ViewProfile',
   components: {
     Post,
   },
@@ -107,8 +109,8 @@ export default {
       userId: null,
       username: '',
       posts: [],
-      loading: false,
       error: null,
+      loading: true,
       showDeleteDialog: false,
       userAvatar: defaultAvatar,
       isOwnProfile: false, 
@@ -116,6 +118,9 @@ export default {
   },
   created() {
     this.userId = this.$route.params.id;
+    // Set username from query parameter immediately
+    this.username = decodeURIComponent(this.$route.query.username || '');
+    this.isOwnProfile = this.userId === authService.getCurrentUser()?.id;
     this.fetchUserPosts();
   },
   watch: {
@@ -126,38 +131,25 @@ export default {
   },
   methods: {
     async fetchUserPosts() {
-      this.loading = true;
-      this.error = null;
-
       try {
-        const token = authService.getToken();
-        if (!token) {
-          this.$router.push('/login');
-          return;
-        }
-
+        this.loading = true;
         const response = await fetch(`http://localhost:8000/api/posts/user/${this.userId}`, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${authService.getToken()}`,
           },
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch user posts');
+          if (response.status === 404) {
+            this.error = 'User not found';
+          } else {
+            this.error = 'Failed to fetch user posts';
+          }
+          return;
         }
 
         const data = await response.json();
         this.posts = data.posts;
-        this.username = data.username;
-
-        // Check if viewing own profile
-        const currentUser = authService.getCurrentUser();
-        if (currentUser && currentUser.id === parseInt(this.userId)) {
-          this.userAvatar = currentUser.avatar || defaultAvatar;
-          this.isOwnProfile = true;
-        } else {
-          this.isOwnProfile = false;
-        }
       } catch (err) {
         this.error = err.message;
         if (err.message.includes('token')) {
@@ -288,6 +280,12 @@ export default {
   margin-top: 2rem;
   text-transform: none;
   font-weight: 500;
+}
+
+.no-posts-alert {
+  background-color: #f5f5f5 !important;
+  color: #666 !important;
+  border: none !important;
 }
 
 .delete-post-btn:hover {

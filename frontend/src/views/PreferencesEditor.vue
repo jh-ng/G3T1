@@ -137,9 +137,9 @@ export default {
       }
     });
 
-    const travelStyles = ['Active', 'Cultural', 'Family', 'Shopping', 'Solo'];
+    const travelStyles = ['Active', 'Family', 'Shopping', 'Solo', 'Relaxation'];
     const touristSites = ['Nature Sites', 'Cultural Sites', 'Leisure Attractions', 'Sports Activities'];
-    const dietOptions = ['Halal', 'Vegetarian', 'Kosher', 'None'];
+    const dietOptions = ['None', 'Halal', 'Vegetarian', 'Kosher'];
 
     watch([startHour, startMinute], () => {
       if (startHour.value !== '' && startMinute.value !== '') {

@@ -2,9 +2,20 @@
   <div class="post">
     <!-- Post Header -->
     <div class="post-header">
-      <router-link :to="'/user/' + post.user_id" class="username">
+      <router-link :to="getUserProfileRoute(post.user_id, post.username)" class="username">
         {{ displayUsername }}
       </router-link>
+      <div class="title-location-container">
+        <div
+          v-if="post.title"
+          class="post-title text-lg font-semibold text-gray-800"
+        >
+          {{ post.title }}
+        </div>
+        <div v-if="post.location" class="post-location text-gray-500 text-sm">
+          📍 {{ simplifiedLocation }}
+        </div>
+      </div>
     </div>
 
     <!-- Post Image -->
@@ -40,29 +51,22 @@
     <!-- Post Content -->
     <div class="post-content text-left">
       <span class="username">{{ displayUsername }}</span>
-      <span class="post-text">{{ post.title }}</span>
+      <span class="post-text">{{ post.content }}</span>
     </div>
 
-    <!-- Tags -->
+    <!-- Tags moved and aligned left -->
     <div
-      v-if="post.preference && post.preference.length"
-      class="post-tags px-4 mb-2"
+      v-if="post.tags && post.tags.length"
+      class="post-tags text-left pl-4 mb-2"
     >
       <span
-        v-for="(tag, index) in post.preference"
-        :key="index"
-        class="tag text-blue-500 font-semibold mr-2"
+        v-for="tag in post.tags"
+        :key="tag"
+        class="tag-link mr-2 cursor-pointer"
+        @click="$emit('tag-clicked', tag)"
       >
         #{{ tag }}
       </span>
-    </div>
-
-    <!-- Location -->
-    <div
-      v-if="post.location"
-      class="post-location px-4 mb-2 text-gray-500 text-sm"
-    >
-      📍 {{ simplifiedLocation }}
     </div>
 
     <!-- View Comments Link -->
@@ -110,7 +114,7 @@
           <div class="dialog-comments-container">
             <!-- Post Header -->
             <div class="dialog-header">
-              <router-link :to="'/user/' + post.user_id" class="username">
+              <router-link :to="getUserProfileRoute(post.user_id, post.username)" class="username">
                 {{ displayUsername }}
               </router-link>
             </div>
@@ -119,7 +123,7 @@
             <div class="comments-list">
               <!-- Original Post -->
               <div class="original-post-content">
-                <router-link :to="'/user/' + post.user_id" class="username">
+                <router-link :to="getUserProfileRoute(post.user_id, post.username)" class="username">
                   {{ displayUsername }}
                 </router-link>
                 <span class="post-text">{{ post.title }}</span>
@@ -133,10 +137,7 @@
               >
                 <!-- Parent Comment -->
                 <div class="parent-comment">
-                  <router-link
-                    :to="'/user/' + comment.user_id"
-                    class="username"
-                  >
+                  <router-link :to="getUserProfileRoute(comment.user_id, comment.username)" class="username">
                     {{ comment.username }}
                   </router-link>
                   <span class="comment-text">{{ comment.comment_text }}</span>
@@ -165,26 +166,15 @@
                   >
                     <div class="reply-content">
                       <div>
-                        <router-link
-                          :to="'/user/' + reply.user_id"
-                          class="username"
-                        >
+                        <router-link :to="getUserProfileRoute(reply.user_id, reply.username)" class="username">
                           {{ reply.username }}
                         </router-link>
                         <span class="reply-text">
-                          <template v-if="reply.reply_to_username">
-                            <router-link
-                              :to="'/user/' + reply.reply_to_user_id"
-                              class="mention"
-                            >
-                              @{{ reply.reply_to_username }}
+                          <template v-if="reply.reply_to_user_id">
+                            <router-link :to="getUserProfileRoute(reply.reply_to_user_id, getUsernameForReply(reply))" class="mention">
+                              @{{ getUsernameForReply(reply) }}
                             </router-link>
-                            {{
-                              getCommentTextWithoutMention(
-                                reply.comment_text,
-                                reply.reply_to_username
-                              )
-                            }}
+                            {{ reply.comment_text }}
                           </template>
                           <template v-else>
                             {{ reply.comment_text }}
@@ -236,8 +226,8 @@
 </template>
 
 <script>
-import { ref, onMounted, computed  } from "vue";
-import authService from "@/services/auth";
+import { ref, onMounted, computed } from "vue";
+import authService from "@/services/auth"; // Added import for authService
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faHeart, faComment } from "@fortawesome/free-solid-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -251,6 +241,7 @@ export default {
   components: {
     FontAwesomeIcon,
   },
+
   data() {
     return {
       heart: faHeart,
@@ -263,6 +254,7 @@ export default {
       required: true,
     },
   },
+
   setup(props) {
     const hasLiked = ref(false);
     const likesCount = ref(0);
@@ -344,6 +336,17 @@ export default {
       }
     };
 
+    onMounted(() => {
+      fetchComments();
+      fetchLikes();
+
+      // Start polling every 5 seconds
+      setInterval(() => {
+        fetchComments();
+        fetchLikes();
+      }, 5000);
+    });
+
     const handleLike = async () => {
       try {
         const token = authService.getToken();
@@ -362,22 +365,41 @@ export default {
       }
     };
 
-    const submitComment = async () => {
-      if (!newComment.value.trim()) return;
+    const replyToComment = (comment, parent = null) => {
+      replyingTo.value = {
+        ...comment,
+        user_id: comment.user_id,
+        username: comment.username,
+      };
 
+      parentComment.value = parent || comment;
+      newComment.value = `@${comment.username} `;
+
+      setTimeout(() => {
+        document.querySelector(".dialog-comment-input .comment-input").focus();
+      }, 50);
+    };
+
+    const handleSubmit = async () => {
+      if (isSubmitting.value || !newComment.value.trim()) return;
+
+      isSubmitting.value = true;
       try {
         const token = authService.getToken();
+        const commentData = {
+          post_id: props.post.id,
+          comment: newComment.value.replace(/^@\w+\s+/, ""), // Remove the @mention from the comment text
+          parent_comment_id: replyingTo.value ? parentComment.value.id : null,
+          reply_to_user_id: replyingTo.value ? replyingTo.value.user_id : null,
+        };
+
         const response = await fetch(`${API_BASE_URL}/api/social/comment`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            post_id: props.post.id,
-            comment: newComment.value,
-            parent_comment_id: replyingTo.value?.id || null,
-          }),
+          body: JSON.stringify(commentData),
         });
 
         if (!response.ok) {
@@ -388,11 +410,14 @@ export default {
         // Clear input and reset reply state
         newComment.value = "";
         replyingTo.value = null;
+        parentComment.value = null;
 
-        // Refresh comments to get updated count
+        // Refresh comments
         await fetchComments();
       } catch (error) {
         console.error("Error posting comment:", error);
+      } finally {
+        isSubmitting.value = false;
       }
     };
 
@@ -426,15 +451,6 @@ export default {
       if (!text || !username) return text;
       // Remove the @username from the beginning of the comment
       return text.replace(new RegExp(`^@${username}\\s*`), "");
-    };
-
-    const replyToComment = (comment, parent = null) => {
-      replyingTo.value = comment;
-      parentComment.value = parent || comment;
-      newComment.value = `@${comment.username} `;
-      setTimeout(() => {
-        document.querySelector(".dialog-comment-input .comment-input").focus();
-      }, 50);
     };
 
     const submitReply = async () => {
@@ -477,19 +493,27 @@ export default {
       }
     };
 
-    const handleSubmit = async () => {
-      if (isSubmitting.value || !newComment.value.trim()) return;
-
-      isSubmitting.value = true;
-      try {
-        if (replyingTo.value) {
-          await submitReply();
-        } else {
-          await submitComment();
+    const getUsernameForReply = (reply) => {
+      if (!reply.reply_to_user_id) return null;
+      // Find the username from either the parent comment or other replies
+      const allComments = comments.value.reduce((acc, comment) => {
+        acc.push(comment);
+        if (comment.replies) {
+          acc.push(...comment.replies);
         }
-      } finally {
-        isSubmitting.value = false;
-      }
+        return acc;
+      }, []);
+      const replyToUser = allComments.find(
+        (c) => c.user_id === reply.reply_to_user_id
+      );
+      return replyToUser ? replyToUser.username : null;
+    };
+
+    const getUserProfileRoute = (userId, username) => {
+      const currentUser = authService.getCurrentUser();
+      return currentUser && currentUser.id === parseInt(userId) 
+        ? `/user/${userId}` 
+        : `/profile/${userId}?username=${encodeURIComponent(username)}`;
     };
 
     onMounted(() => {
@@ -507,16 +531,17 @@ export default {
       replyingTo,
       parentComment,
       handleLike,
-      submitComment,
-      formatTime,
-      openComments,
-      replyToComment,
       submitReply,
       displayUsername: props.post.username,
       getCommentTextWithoutMention,
       handleSubmit,
       isSubmitting,
       simplifiedLocation,
+      replyToComment,
+      formatTime,
+      openComments,
+      getUsernameForReply,
+      getUserProfileRoute
     };
   },
 };
@@ -533,14 +558,18 @@ export default {
 .post-header {
   padding: 14px 16px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   border-bottom: 1px solid #efefef;
 }
 
 .post-image {
   width: 100%;
-  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  object-position: center;
   display: block;
+  background-color: #f0f0f0;
 }
 
 .post-actions {
@@ -582,6 +611,7 @@ export default {
   text-decoration: none;
   color: #262626;
   margin-right: 6px;
+  margin-bottom: 10px;
 }
 
 .view-comments-link {
@@ -706,10 +736,18 @@ export default {
 
 .reply-text {
   color: #262626;
+  margin-left: 4px;
 }
 
 .mention {
   color: #00376b;
+  font-weight: 600;
+  text-decoration: none;
+  margin-right: 4px;
+}
+
+.mention:hover {
+  text-decoration: underline;
 }
 
 .replies {
@@ -762,9 +800,40 @@ export default {
   border-bottom: 1px solid #efefef;
 }
 
-.post-tags .tag {
-  display: inline-block;
-  margin-right: 8px;
-  font-size: 14px;
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tag-link {
+  color: #1da1f2;
+  font-weight: 500;
+}
+
+.tag-link:hover {
+  color: #1a91da;
+  text-decoration: underline;
+}
+.post-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.title-location-container {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between; 
+  width: 100%; 
+}
+
+.post-title {
+  margin-right: 10px;
+  font-size: 1.0em;
+  font-weight: medium;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  /* color: #2c3e50; */
+  font-family: 'Montserrat', sans-serif;
 }
 </style>

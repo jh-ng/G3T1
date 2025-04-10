@@ -19,7 +19,7 @@ const vuetify = createVuetify({
           warning: '#ff9800',
           info: '#2196F3',
           success: '#4CAF50',
-          background: '#f8f9fd'
+          // background: '#f8f9fd'
         }
       }
     }

@@ -63,11 +63,11 @@ const getUserPreferences = async (req) => {
     
     // Map the preferences to the format expected by the AI service
     const mappedPreferences = {
-      travelStyle: preferences.travelStyle || ["Active"],
-      travelSites: preferences.travelSites || ["Nature Sites"],
+      travelStyle: preferences.travel_style || ["Active"],
+      travelSites: preferences.tourist_sites || ["Nature Sites"],
       diet: preferences.diet || ["None"],
-      startTime: preferences.startTime || "08:30",
-      endTime: preferences.endTime || "22:00"
+      startTime: preferences.start_time || "08:30",
+      endTime: preferences.end_time || "22:00"
     };
     
     console.log(`Mapped preferences: ${JSON.stringify(mappedPreferences, null, 2)}`);
@@ -90,15 +90,6 @@ const getUserPreferences = async (req) => {
       // Something happened in setting up the request that triggered an Error
       console.error('Request setup error:', error.message);
     }
-    
-    // Return default preferences if there's an error
-    return {
-      travelStyle: ["Active"],
-      travelSites: ["Nature Sites"],
-      diet: ["None"],
-      startTime: "08:30",
-      endTime: "22:00"
-    };
   }
 };
 
@@ -425,6 +416,7 @@ const generateGeminiPrompt = (preferences, locationData, tripDetails) => {
     - NEVER use "0mins" for travel time unless activities are in the exact same location
     - NEVER use "0mins" for duration
     - Ensure activities don't overlap in time, accounting for both duration and travel time
+    - Do not use estimations of timings (e.g. "1-2h"). Always use specific times.
 
     Format the response as a valid JSON object with days as keys and activities as values.
     
@@ -583,53 +575,44 @@ app.delete('/api/user/:userID', (req, res) => {
 
 // Send itinerary to USER microservice
 const saveItineraryToUserMicroservice = async (userID, itinerary) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log(`Itinerary for user ${userID} saved to USER microservice.`);
-        resolve({ success: true, message: 'Itinerary saved to USER microservice.' });
-      }, 500);
-    });
-  };
-
-const aiLogs = []; // In-memory storage for logs
+  try {
+    const userServiceUrl = process.env.USER_SERVICE_URL;
+    const response = await axios.post(
+      `${userServiceUrl}/api/user/${userID}/itinerary`,
+      { itinerary },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error saving itinerary to USER microservice:', error);
+    throw error;
+  }
+};
 
 // Save Itinerary
 app.post('/api/saveItinerary', async (req, res) => {
-    try {
-      const { userID, itinerary, prompt } = req.body;
-      if (!userID || !itinerary) {
-        return res.status(400).json({ error: 'userID and itinerary are required' });
-      }
-  
-      // Simulate sending the itinerary to the USER microservice
-      const userServiceResponse = await saveItineraryToUserMicroservice(userID, itinerary);
-  
-      // Create a log entry
-      const logEntry = {
-        timestamp: new Date().toISOString(),
-        userID,
-        itinerary,
-        prompt, // Optional: include the prompt used to generate the itinerary
-        userServiceResponse
-      };
-  
-      // Store the log entry (in memory for now)
-      aiLogs.push(logEntry);
-      console.log("New AI log entry:", logEntry);
-  
-      res.json({
-        message: 'Itinerary saved successfully.',
-        logEntry
-      });
-    } catch (error) {
-      console.error('Error saving itinerary:', error);
-      res.status(500).json({ error: 'An error occurred while saving the itinerary.' });
+  try {
+    const { userID, itinerary } = req.body;
+    if (!userID || !itinerary) {
+      return res.status(400).json({ error: 'userID and itinerary are required' });
     }
-  });
-  
 
+    // Send the itinerary to the USER microservice
+    const userServiceResponse = await saveItineraryToUserMicroservice(userID, itinerary);
 
-
+    res.json({
+      message: 'Itinerary saved successfully.',
+      response: userServiceResponse
+    });
+  } catch (error) {
+    console.error('Error saving itinerary:', error);
+    res.status(500).json({ error: 'An error occurred while saving the itinerary.' });
+  }
+});
 
 // Start the server
 const PORT = process.env.PORT || 3000;
@@ -641,6 +624,3 @@ app.listen(PORT, () => {
 module.exports = {
   getLocationData
 };
-
-
-
