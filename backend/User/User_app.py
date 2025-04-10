@@ -58,7 +58,7 @@ def token_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# This endpoint is called when the user submits their taste and preferences for the first time.
+# This endpoint is called when the user submits their taste and preferences for the first time, user gets created
 @app.route('/api/user/create', methods=['POST'])
 @token_required
 def create_user():
@@ -93,6 +93,7 @@ def create_user():
         logger.error(f"Error creating user: {str(e)}")
         return jsonify({"error": f"Error creating user: {str(e)}"}), 500
 
+# retrieve the user
 @app.route("/api/user/<user_id>", methods=["GET"])
 @token_required
 def get_user(user_id):
@@ -111,6 +112,7 @@ def get_user(user_id):
         logger.error(f"Error fetching user: {str(e)}")
         return jsonify({"error": f"Error fetching user: {str(e)}"}), 500
 
+# retreive the user taste and prefererences
 @app.route("/api/user/<user_id>/taste-preferences", methods=["GET"])
 @token_required
 def get_taste_preferences(user_id):
@@ -131,6 +133,7 @@ def get_taste_preferences(user_id):
         logger.error(f"Error fetching taste preferences: {str(e)}")
         return jsonify({"error": f"Error fetching taste preferences: {str(e)}"}), 500
 
+# update the user taste and preferences
 @app.route("/api/user/<user_id>/taste-preferences", methods=["PUT"])
 @token_required
 def update_taste_preferences(user_id):
@@ -167,6 +170,7 @@ def update_taste_preferences(user_id):
         logger.error(f"Error updating taste preferences: {str(e)}")
         return jsonify({"error": f"Error updating taste preferences: {str(e)}"}), 500
 
+# update user profile
 @app.route("/api/user/<user_id>", methods=["PUT"])
 @token_required
 def update_user(user_id):
@@ -199,6 +203,7 @@ def update_user(user_id):
         logger.error(f"Error updating user: {str(e)}")
         return jsonify({"error": f"Error updating user: {str(e)}"}), 500
 
+# delete user account
 @app.route("/api/user/<user_id>", methods=["DELETE"])
 @token_required
 def delete_user(user_id):
