@@ -37,7 +37,8 @@
             v-model="form.diet"
             :options="dietOptions"
             placeholder="Select dietary restriction"
-            :class="{ 'required-warning': triedSubmit && !form.diet }"
+            :max="1"
+            :class="{ 'required-warning': triedSubmit && !form.diet.length }"
           />
         </div>
   
@@ -118,7 +119,7 @@
         form: {
           travel_style: [],
           tourist_sites: [],
-          diet: '',
+          diet: [],  
           start_time: '',
           end_time: ''
         },
@@ -206,7 +207,7 @@
             alert('Please select at least one attraction');
             return;
           }
-          if (!this.form.diet) {
+          if (!this.form.diet.length) {
             alert('Please select a dietary restriction');
             return;
           }
