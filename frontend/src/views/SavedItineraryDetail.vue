@@ -147,13 +147,13 @@
                           <p class="description">{{ activity.description }}</p>
                           
                           <div class="activity-meta">
-                            <div v-if="activity.duration" class="meta-item duration">
+                            <div class="meta-item duration">
                               <v-icon small color="primary" class="meta-icon">mdi-clock-outline</v-icon>
                               <span class="font-weight-medium">Duration:&nbsp;</span> {{ activity.duration }}
                             </div>
-                            <div v-if="activity.travelTime || activity.travel_time" class="meta-item travel">
+                            <div v-if="activity.travel_time_between_locations" class="meta-item travel">
                               <v-icon small color="primary" class="meta-icon">mdi-car</v-icon>
-                              <span class="font-weight-medium">Travel time:&nbsp;</span> {{ activity.travelTime || activity.travel_time }}
+                              <span class="font-weight-medium">Travel time:&nbsp;</span> {{ activity.travel_time_between_locations }}
                             </div>
                           </div>
                           
@@ -522,8 +522,9 @@ export default {
             },
             {
               time: '14:00',
-              locationName: 'Departure',
-              location: 'Airport/Station',
+              name: 'Departure',
+              locationName: 'Airport/Station',
+              location: 'Departure Point',
               description: `Check out and depart from ${destination}.`,
               duration: '1 hour',
               travelTime: '30 minutes'
