@@ -575,53 +575,44 @@ app.delete('/api/user/:userID', (req, res) => {
 
 // Send itinerary to USER microservice
 const saveItineraryToUserMicroservice = async (userID, itinerary) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log(`Itinerary for user ${userID} saved to USER microservice.`);
-        resolve({ success: true, message: 'Itinerary saved to USER microservice.' });
-      }, 500);
-    });
-  };
-
-const aiLogs = []; // In-memory storage for logs
+  try {
+    const userServiceUrl = process.env.USER_SERVICE_URL;
+    const response = await axios.post(
+      `${userServiceUrl}/api/user/${userID}/itinerary`,
+      { itinerary },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error saving itinerary to USER microservice:', error);
+    throw error;
+  }
+};
 
 // Save Itinerary
 app.post('/api/saveItinerary', async (req, res) => {
-    try {
-      const { userID, itinerary, prompt } = req.body;
-      if (!userID || !itinerary) {
-        return res.status(400).json({ error: 'userID and itinerary are required' });
-      }
-  
-      // Simulate sending the itinerary to the USER microservice
-      const userServiceResponse = await saveItineraryToUserMicroservice(userID, itinerary);
-  
-      // Create a log entry
-      const logEntry = {
-        timestamp: new Date().toISOString(),
-        userID,
-        itinerary,
-        prompt, // Optional: include the prompt used to generate the itinerary
-        userServiceResponse
-      };
-  
-      // Store the log entry (in memory for now)
-      aiLogs.push(logEntry);
-      console.log("New AI log entry:", logEntry);
-  
-      res.json({
-        message: 'Itinerary saved successfully.',
-        logEntry
-      });
-    } catch (error) {
-      console.error('Error saving itinerary:', error);
-      res.status(500).json({ error: 'An error occurred while saving the itinerary.' });
+  try {
+    const { userID, itinerary } = req.body;
+    if (!userID || !itinerary) {
+      return res.status(400).json({ error: 'userID and itinerary are required' });
     }
-  });
-  
 
+    // Send the itinerary to the USER microservice
+    const userServiceResponse = await saveItineraryToUserMicroservice(userID, itinerary);
 
-
+    res.json({
+      message: 'Itinerary saved successfully.',
+      response: userServiceResponse
+    });
+  } catch (error) {
+    console.error('Error saving itinerary:', error);
+    res.status(500).json({ error: 'An error occurred while saving the itinerary.' });
+  }
+});
 
 // Start the server
 const PORT = process.env.PORT || 3000;
@@ -633,5 +624,3 @@ app.listen(PORT, () => {
 module.exports = {
   getLocationData
 };
-
-

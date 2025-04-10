@@ -17,14 +17,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const GOOGLE_PLACES_API_URL = "https://places.googleapis.com/v1/places:searchText";
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
-// Debug middleware to log all requests
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  console.log('Query params:', req.query);
-  console.log('Body:', req.body);
-  next();
-});
-
 // Helper function to make Google Places API request
 const searchPlaces = async (query) => {
   console.log(`Making request to Google Places API for query: ${query}`);
@@ -123,4 +115,3 @@ const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
-
