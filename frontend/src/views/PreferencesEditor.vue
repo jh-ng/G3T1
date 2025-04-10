@@ -142,7 +142,7 @@ export default {
       }
     });
 
-    const travelStyles = ['Active', 'Family', 'Shopping', 'Solo', 'Relaxation'];
+    const travelStyles = ['Adventure', 'Solo', 'Family', 'Shopping', 'Relaxation'];
     const touristSites = ['Nature Sites', 'Cultural Sites', 'Leisure Attractions', 'Sports Activities'];
     const dietOptions = ['None', 'Halal', 'Vegetarian', 'Kosher'];
 
