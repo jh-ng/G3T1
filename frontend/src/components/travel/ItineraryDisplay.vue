@@ -48,10 +48,10 @@
                 prepend-icon="mdi-content-save" 
                 @click="saveItinerary"
                 :loading="saving"
-                :disabled="saving"
+                :disabled="saving || itinerarySaved"
                 class="save-button"
               >
-                Save Itinerary
+                {{ itinerarySaved ? 'Itinerary Saved' : 'Save Itinerary' }}
               </v-btn>
               
               <!-- Success Message -->
@@ -171,6 +171,7 @@ export default {
     const saving = ref(false)
     const saveSuccess = ref(false)
     const saveError = ref(null)
+    const itinerarySaved = ref(false)
 
     console.log('------ ITINERARY DISPLAY DEBUG ------')
     console.log('Raw itineraryData:', props.itineraryData)
@@ -207,22 +208,21 @@ export default {
         }
       }
       
-      // Get details from the specific travelDetails property
+      // Get details from the specific travelDetails property or from the geminiResponse
       const details = props.itineraryData.travelDetails || 
-                       props.itineraryData.travel_details || 
-                       props.itineraryData || {}
+                     (props.itineraryData.geminiResponse ? JSON.parse(props.itineraryData.geminiResponse).travelDetails : {}) ||
+                     props.itineraryData || {}
       
       console.log('Using details:', details)
       
-    //   const today = new Date().toISOString().split('T')[0]
       return {
         number_of_travelers: details.numberOfTravelers || details.number_of_travelers || 0,
         budget: details.budget || '-',
         start_date: details.startDate || details.start_date || null,
         end_date: details.endDate || details.end_date || null,
-        daily_start_time: details.dailyStartTime || details.start_time || details.daily_start_time || '-',
-        daily_end_time: details.dailyEndTime || details.end_time || details.daily_end_time || '-',
-        destination: details.destination || details.travelDestination || details.travel_destination || details.destinationName || 'Travel Details'
+        daily_start_time: details.dailyStartTime || details.daily_start_time || '-',
+        daily_end_time: details.dailyEndTime || details.daily_end_time || '-',
+        destination: details.destination || 'Travel Details'
       }
     })
     
@@ -861,7 +861,8 @@ export default {
         
         // Make sure travelDetails has all the required properties correctly named
         travelDetailsObj = {
-          destination: travelDetailsObj.destination || travelDetailsObj.travelDestination || travelDetailsObj.travel_destination || travelDetailsObj.destinationName,
+          // Preserve the original destination without fallbacks to keep the full location
+          destination: travelDetailsObj.destination,
           startDate: travelDetailsObj.startDate || travelDetailsObj.start_date,
           endDate: travelDetailsObj.endDate || travelDetailsObj.end_date,
           numTravelers: travelDetailsObj.numberOfTravelers || travelDetailsObj.number_of_travelers,
@@ -874,6 +875,7 @@ export default {
         
         await itineraryService.saveItinerary(itineraryObj, travelDetailsObj)
         saveSuccess.value = true
+        itinerarySaved.value = true
       } catch (error) {
         console.error('Error saving itinerary:', error)
         saveError.value = error.message || 'Failed to save itinerary'
@@ -901,7 +903,8 @@ export default {
       saveError,
       getTabDisplay,
       getTimelineColor,
-      formatDateForTab
+      formatDateForTab,
+      itinerarySaved
     }
   }
 }

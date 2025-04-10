@@ -217,14 +217,8 @@ export default {
           category: place.properties.category
         })
         
-        // Construct a detailed destination string
-        const locationParts = []
-        if (place.properties.name) locationParts.push(place.properties.name)
-        if (place.properties.city) locationParts.push(place.properties.city)
-        if (place.properties.state) locationParts.push(place.properties.state)
-        if (place.properties.country) locationParts.push(place.properties.country)
-        
-        formData.value.destination = locationParts.join(', ') || place.properties.formatted
+        // Use the full formatted address directly instead of constructing it
+        formData.value.destination = place.properties.formatted || place.properties.name
       }
     }
 
