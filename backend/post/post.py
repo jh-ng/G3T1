@@ -69,7 +69,7 @@ def create_post():
     title = request.form.get('title')
     content = request.form.get('content')
     location = request.form.get('location')
-    preferences = request.form.get('preferences')  # Might be comma-separated
+    preferences = request.form.get('preferences') 
 
     
     if not all([title, content]):
