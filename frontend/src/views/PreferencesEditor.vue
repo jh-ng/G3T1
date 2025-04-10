@@ -36,7 +36,11 @@
         v-model="form.diet"
         :options="dietOptions"
         placeholder="Select dietary restriction"
+        :multiple="true"
         :max="1"
+        :hideSelected="true"
+        @select="val => form.diet = [val]"
+        @remove="() => form.diet = []"
         :class="{ 'required-warning': triedSubmit && !form.diet.length }"
       />
     </div>
@@ -161,6 +165,16 @@ export default {
         form.end_time = '';
       }
     });
+
+    // Ensure diet is always an array with max 1 item
+    watch(() => form.diet, (newVal) => {
+      if (!Array.isArray(newVal)) {
+        form.diet = newVal ? [newVal] : [];
+      } else if (newVal.length > 1) {
+        // Keep only the most recently added item
+        form.diet = [newVal[newVal.length - 1]];
+      }
+    }, { immediate: true });
 
     const loadPreferences = async () => {
       try {
