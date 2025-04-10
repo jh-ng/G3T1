@@ -5,6 +5,12 @@
       <router-link :to="'/user/' + post.user_id" class="username">
         {{ displayUsername }}
       </router-link>
+      <div
+        v-if="post.title"
+        class="post-title text-lg font-semibold text-gray-800"
+      >
+        {{ post.title }}
+      </div>
       <div v-if="post.location" class="post-location text-gray-500 text-sm">
         📍 {{ simplifiedLocation }}
       </div>
@@ -232,7 +238,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed  } from "vue";
+import { ref, onMounted, computed } from "vue";
 import authService from "@/services/auth";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faHeart, faComment } from "@fortawesome/free-solid-svg-icons";
@@ -766,7 +772,7 @@ export default {
 }
 
 .tag-link {
-  color: #1DA1F2;
+  color: #1da1f2;
   font-weight: 500;
 }
 
