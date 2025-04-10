@@ -45,11 +45,6 @@ const authenticateJWT = (req, res, next) => {
   }
 };
 
-// Routes
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', service: 'itinerary-microservice' });
-});
-
 // Save an itinerary
 app.post('/api/itineraries', authenticateJWT, async (req, res) => {
   try {

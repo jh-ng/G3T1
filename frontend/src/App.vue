@@ -1,6 +1,6 @@
 <template>
   <v-app style="height: 100vh; width: 100vw">
-    <v-app-bar color="#6C64F2">
+    <v-app-bar color="#6C64F2" v-if="showNavigation">
       <v-app-bar-nav-icon
         variant="text"
         @click.stop="drawer = !drawer"
@@ -57,6 +57,7 @@
 
     <!-- Navigation Drawer -->
     <v-navigation-drawer
+      v-if="showNavigation"
       v-model="drawer"
       temporary
       style="height: 100vh; display: flex; flex-direction: column"
@@ -139,6 +140,9 @@ export default {
     unreadCount() {
       return notificationService.unreadCount.value;
     },
+    showNavigation() {
+      return this.$route.name !== 'UserPref';
+    }
   },
 
   methods: {

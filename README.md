@@ -25,50 +25,71 @@ npm run dev
 docker-compose up -d --build
 ```
 
-## Integrated Application Architecture
-
-The application consists of a Vue.js frontend and multiple microservices backend with a Kong API gateway:
-
-- **Frontend**: Single Vue.js application with travel planning features and AI-powered itinerary generation
-- **Backend Services**:
-  - **AI Microservice**: Generates travel itineraries using AI
-  - **Location Service**: Provides place information and recommendations
-  - **User Service**: Manages user profiles and preferences
-  - **Auth Service**: Handles authentication and authorization
-  - **Post Service**: Manages user posts and shared itineraries
-- **Kong API Gateway**: Routes API requests to appropriate microservices
-
 ### Environment Variables
-The frontend uses a `.env` file containing API keys. Current environment variables include:
-- `VUE_APP_GEOAPIFY_API_KEY`: API key for Geoapify location autocomplete service
+`/frontend`:
+VUE_APP_GEOAPIFY_API_KEY=<secret_key>
 
-### Main Application Features
-- Travel itinerary planning with AI assistance
-- Location search with autocomplete
-- User authentication
-- Sharing travel plans
+`/backend/ai-microservice`
+GEMINI_API_KEY = <secret_key>
+GOOGLE_CLOUD_PROJECT_ID = <secret_key>
+PORT = 3000
+PLACES_MICROSERVICE_URL = http://localhost:4500
+USER_SERVICE_URL = http://localhost:8000
+JWT_SECRET = <secret_key>
+JWT_ALGORITHM = HS256
 
-## Docker Commands Guide
+`/backend/Authentication`
+JWT_SECRET = <secret_key>
+JWT_ALGORITHM = HS256
+SUPABASE_URL = https://rnzufiqdpsgyatqpjuvm.supabase.co
+SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuenVmaXFkcHNneWF0cXBqdXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MTY0NTQsImV4cCI6MjA1NzQ5MjQ1NH0.zUJBI37FlfJWnRu_rFzjd_3tljI_1ZhAyHajIv7yQX4
 
-### Basic Commands
+`/backend/create`
+JWT_SECRET = <secret_key>
+JWT_ALGORITHM = HS256
 
-#### Start Services
-```bash
-# Start all services in detached mode (run in background)
-docker-compose up -d
+`/backend/itinerary-service`
+JWT_SECRET = <secret_key>
+JWT_ALGORITHM = HS256
+SUPABASE_URL = https://rnzufiqdpsgyatqpjuvm.supabase.co
+SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuenVmaXFkcHNneWF0cXBqdXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MTY0NTQsImV4cCI6MjA1NzQ5MjQ1NH0.zUJBI37FlfJWnRu_rFzjd_3tljI_1ZhAyHajIv7yQX4
+ITINERARIES_TABLE = itineraries
+PORT = 5400
 
-# Start and rebuild all services
-docker-compose up -d --build
+`/backend/location`
+PORT = 4500
+GOOGLE_PLACES_API_KEY = <secret_key>
 
-# Start specific service
-docker-compose up -d post-service
-```
+`/backend/post`
+JWT_SECRET = <secret_key>
+JWT_ALGORITHM = HS256
+CLOUDINARY_CLOUD_NAME = <secret_key>
+CLOUDINARY_API_KEY = <secret_key>
+CLOUDINARY_API_SECRET = <secret_key>
+SUPABASE_URL = https://rnzufiqdpsgyatqpjuvm.supabase.co
+SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuenVmaXFkcHNneWF0cXBqdXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MTY0NTQsImV4cCI6MjA1NzQ5MjQ1NH0.zUJBI37FlfJWnRu_rFzjd_3tljI_1ZhAyHajIv7yQX4
 
-**What is detached mode (-d)?**
-- Runs containers in the background
-- Terminal remains available for other commands
-- Logs won't show in terminal (use docker-compose logs to view them)
-- Services keep running even if you close the terminal
+`/backend/RabbitMQListener`
+# AMQP URL
+AMQP_URL = <secret_key>
+# Queue name 
+RABBITMQ_QUEUE = notifications
+# OutSystems Notification API
+OUTSYSTEMS_NOTIFY_UR = https://personal-nrm7dwxa.outsystemscloud.com/NotificationService/rest/NotificationAPI/notifications
+
+`/backend/Social`
+AMQP_URL = <secret_key>
+JWT_SECRET = <secret_key>
+JWT_ALGORITHM = HS256
+SUPABASE_URL = https://rnzufiqdpsgyatqpjuvm.supabase.co
+SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuenVmaXFkcHNneWF0cXBqdXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MTY0NTQsImV4cCI6MjA1NzQ5MjQ1NH0.zUJBI37FlfJWnRu_rFzjd_3tljI_1ZhAyHajIv7yQX4
+
+
+`backend/User`
+JWT_SECRET = <secret_key>
+JWT_ALGORITHM = HS256
+SUPABASE_URL = https://rnzufiqdpsgyatqpjuvm.supabase.co
+SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuenVmaXFkcHNneWF0cXBqdXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MTY0NTQsImV4cCI6MjA1NzQ5MjQ1NH0.zUJBI37FlfJWnRu_rFzjd_3tljI_1ZhAyHajIv7yQX4
 
 #### Stop Services
 ```bash
@@ -89,44 +110,4 @@ docker-compose logs post-service
 
 # Follow logs in real-time
 docker-compose logs -f
-```
-
-### Data Management
-
-#### Fresh Start (Reset Everything)
-```bash
-# Remove everything including databases
-docker-compose down -v
-
-# Rebuild and start fresh
-docker-compose up -d --build
-```
-
-#### Update Code Without Losing Data
-```bash
-# Rebuild specific service
-docker-compose up -d --build post-service
-
-# Rebuild all services
-docker-compose up -d --build
-```
-
-#### Development Workflow
-1. First time setup:
-```bash
-docker-compose up -d --build
-```
-
-2. Regular development (preserve data):
-```bash
-# Stop services
-docker-compose down
-
-# Start services
-docker-compose up -d
-```
-
-3. After code changes:
-```bash
-docker-compose up -d --build
-```
+``
