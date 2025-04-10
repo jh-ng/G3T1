@@ -201,14 +201,26 @@ export default {
         const data = await response.json();
         const tastePreferences = data.taste_preferences || {};
         this.preferences = [];
-        for (const key in tastePreferences) {
-          const value = tastePreferences[key];
-          if (Array.isArray(value)) {
-            this.preferences = this.preferences.concat(value);
-          } else if (typeof value === "string") {
-            this.preferences.push(value);
+
+        // Add travel styles
+        if (Array.isArray(tastePreferences.travel_style)) {
+          this.preferences = this.preferences.concat(tastePreferences.travel_style);
+        }
+
+        // Add tourist sites
+        if (Array.isArray(tastePreferences.tourist_sites)) {
+          this.preferences = this.preferences.concat(tastePreferences.tourist_sites);
+        }
+
+        // Add diet preference if it exists and is an array
+        if (Array.isArray(tastePreferences.diet) && tastePreferences.diet.length > 0) {
+          // Only add diet if it's not "None"
+          const dietPreferences = tastePreferences.diet.filter(diet => diet !== 'None');
+          if (dietPreferences.length > 0) {
+            this.preferences = this.preferences.concat(dietPreferences);
           }
         }
+
       } catch (err) {
         console.error("Failed to load preferences:", err.message);
         this.preferences = []; 
