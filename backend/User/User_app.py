@@ -72,7 +72,7 @@ def create_user():
         check_result = supabase.table(USER_TABLE).select("*").eq("userId", data["user_id"]).execute()
         
         if len(check_result.data) > 0:
-            return jsonify({"message": "User already exists", "user": check_result.data[0]}), 200
+            return jsonify({"message": "User already exists", "user": check_result.data[0]}), 409
         
         user_data = {
             "userId": data["user_id"],
