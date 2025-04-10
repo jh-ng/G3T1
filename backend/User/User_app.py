@@ -85,7 +85,7 @@ def create_user():
         result = supabase.table(USER_TABLE).insert(user_data).execute()
 
         if len(result.data) == 0:
-            return jsonify({"error": "Failed to create user"}), 500
+            return jsonify({"error": "Failed to create user"}), 501
 
         return jsonify({"message": "User created successfully", "user": result.data[0]}), 201
 
@@ -156,7 +156,7 @@ def update_taste_preferences(user_id):
         result = supabase.table(USER_TABLE).update(update_data).eq("userId", user_id).execute()
         
         if len(result.data) == 0:
-            return jsonify({"error": "Failed to update preferences"}), 500
+            return jsonify({"error": "Failed to update preferences"}), 501
             
         return jsonify({
             "message": "Preferences updated successfully",
