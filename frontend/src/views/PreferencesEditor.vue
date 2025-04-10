@@ -35,9 +35,8 @@
       <Multiselect
         v-model="form.diet"
         :options="dietOptions"
-        placeholder="Select dietary restrictions"
-        multiple
-        :class="{ 'required-warning': triedSubmit && !form.diet.length }"
+        placeholder="Select dietary restriction"
+        :class="{ 'required-warning': triedSubmit && !form.diet }"
       />
     </div>
 
@@ -114,12 +113,13 @@ export default {
     const form = reactive({
       travel_style: [],
       tourist_sites: [],
-      diet: [],
+      diet: '',
       start_time: '',
       end_time: ''
     });
 
-    const hours = Array.from({ length: 24 }, (_, i) => i);
+    // Hours starting from 7am (7) to 23 (11pm)
+    const hours = Array.from({ length: 17 }, (_, i) => i + 7);
     const minutes = [0, 30];  // Only allow 00 and 30 minutes
 
     const availableEndHours = computed(() => {
@@ -167,7 +167,7 @@ export default {
         if (preferences) {
           form.travel_style = preferences.travel_style || [];
           form.tourist_sites = preferences.tourist_sites || [];
-          form.diet = preferences.diet || [];
+          form.diet = preferences.diet || '';
           
           if (preferences.start_time) {
             const [hour, minute] = preferences.start_time.split(':');
@@ -193,7 +193,7 @@ export default {
       if (
         !form.travel_style.length ||
         !form.tourist_sites.length ||
-        !form.diet.length ||
+        !form.diet ||
         !form.start_time ||
         !form.end_time
       ) {

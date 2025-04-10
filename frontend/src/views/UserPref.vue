@@ -36,9 +36,8 @@
           <Multiselect
             v-model="form.diet"
             :options="dietOptions"
-            placeholder="Select dietary restrictions"
-            multiple
-            :class="{ 'required-warning': triedSubmit && !form.diet.length }"
+            placeholder="Select dietary restriction"
+            :class="{ 'required-warning': triedSubmit && !form.diet }"
           />
         </div>
   
@@ -119,17 +118,17 @@
         form: {
           travel_style: [],
           tourist_sites: [],
-          diet: [],
+          diet: '',
           start_time: '',
           end_time: ''
         },
         triedSubmit: false,
         travelStyles: [
-          'Active',
-          'Solo',
-          'Family',
+          'Adventure',
+          'Relaxation',
+          'Cultural',
           'Shopping',
-          'Relaxation'
+          'Food'
         ],
         touristSites: [
           'Nature Sites',
@@ -138,8 +137,8 @@
           'Sports Activities'
         ],
         dietOptions: ['None', 'Halal', 'Vegetarian', 'Kosher'],
-        // Full list of 24 hours
-        hours: Array.from({ length: 24 }, (_, i) => i),
+        // Hours starting from 7am (7) to 23 (11pm)
+        hours: Array.from({ length: 17 }, (_, i) => i + 7),
         // Minutes restricted to 0 and 30
         minutes: [0, 30],
         startHour: '',
@@ -207,8 +206,8 @@
             alert('Please select at least one attraction');
             return;
           }
-          if (!this.form.diet.length) {
-            alert('Please select at least one dietary restriction');
+          if (!this.form.diet) {
+            alert('Please select a dietary restriction');
             return;
           }
           if (!this.form.start_time) {
@@ -326,4 +325,3 @@
     border: 1px solid #ff4b2b !important;
   }
   </style>
-  
