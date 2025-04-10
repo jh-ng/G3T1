@@ -242,6 +242,7 @@ export default {
   components: {
     FontAwesomeIcon,
   },
+
   data() {
     return {
       heart: faHeart,
@@ -254,6 +255,7 @@ export default {
       required: true,
     },
   },
+  
   setup(props) {
     const hasLiked = ref(false);
     const likesCount = ref(0);
@@ -295,7 +297,7 @@ export default {
         console.error("Error fetching likes:", error);
       }
     };
-
+  
     const fetchComments = async () => {
       try {
         const token = authService.getToken();
@@ -334,6 +336,17 @@ export default {
         commentsCount.value = 0;
       }
     };
+
+    onMounted(() => {
+      fetchComments();
+      fetchLikes();
+
+      // Start polling every 5 seconds
+      setInterval(() => {
+        fetchComments();
+        fetchLikes();
+      }, 5000);
+    });
 
     const handleLike = async () => {
       try {
