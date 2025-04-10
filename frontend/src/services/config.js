@@ -17,7 +17,7 @@ const config = {
     // Notification Service Configuration
     notifications: {
         // Polling interval for real-time updates 
-        pollingInterval: 60000,
+        pollingInterval: 30000,
         maxNotifications: 50,
         typeTitles: {
             'reply': 'New Reply',
