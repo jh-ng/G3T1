@@ -222,7 +222,7 @@ export default {
         end_date: details.endDate || details.end_date || '-',
         daily_start_time: details.dailyStartTime || details.start_time || details.daily_start_time || '-',
         daily_end_time: details.dailyEndTime || details.end_time || details.daily_end_time || '-',
-        destination: details.destination || 'Travel Details'
+        destination: details.destination || details.travelDestination || details.travel_destination || details.destinationName || 'Travel Details'
       }
     })
     
@@ -854,7 +854,7 @@ export default {
         
         // Make sure travelDetails has all the required properties correctly named
         travelDetailsObj = {
-          destination: travelDetailsObj.destination,
+          destination: travelDetailsObj.destination || travelDetailsObj.travelDestination || travelDetailsObj.travel_destination || travelDetailsObj.destinationName,
           startDate: travelDetailsObj.startDate || travelDetailsObj.start_date,
           endDate: travelDetailsObj.endDate || travelDetailsObj.end_date,
           numTravelers: travelDetailsObj.numberOfTravelers || travelDetailsObj.number_of_travelers,
