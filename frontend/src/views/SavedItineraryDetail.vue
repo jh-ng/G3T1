@@ -60,7 +60,7 @@
         <v-card class="mb-6 travel-details-card">
           <v-card-title class="text-h5 text-center destination-title">
             <v-icon color="white" size="32" class="destination-icon mr-2">mdi-map-marker</v-icon>
-            {{ itinerary.travelDestination || 'Travel Details' }}
+            {{ itinerary?.travelDetails?.destination || itinerary?.travelDestination || 'Travel Details' }}
             
             <v-btn
               icon="mdi-arrow-left"
@@ -226,7 +226,6 @@ export default {
         console.log('No geminiResponse found in itinerary data or using generated sample');
         return generateSampleItinerary();
       }
-      
       try {
         const parsed = JSON.parse(itinerary.value.geminiResponse);
         console.log('Parsed itinerary:', parsed);
@@ -234,6 +233,7 @@ export default {
         // Handle date-keyed itinerary format (convert to itinerary array)
         if (parsed.dateKeysItinerary && typeof parsed.dateKeysItinerary === 'object') {
           console.log('Found dateKeysItinerary format, converting to itinerary array');
+          
           
           const dateKeys = Object.keys(parsed.dateKeysItinerary).filter(key => 
             (key.match(/^\d{4}-\d{2}-\d{2}$/) || key.match(/^\d{4}\/\d{2}\/\d{2}$/)) && 
@@ -272,7 +272,6 @@ export default {
         return generateSampleItinerary();
       }
     });
-    
     // Watch for changes in the itinerary and update raw response
     watch(() => itinerary.value?.geminiResponse, (newGeminiResponse) => {
       if (newGeminiResponse) {
@@ -285,6 +284,7 @@ export default {
         }
       }
     }, { immediate: true });
+    
     
     // Function to use the generated itinerary instead of the one from the database
     const useGeneratedItinerary = () => {
@@ -823,9 +823,8 @@ export default {
           }
           
           // Add default duration if not present
-          if (!activity.duration) {
-            activity.duration = "1-2 hours";
-          }
+          // Format the duration
+          activity.duration = getDuration(activity);
           
           // Ensure description is a string
           if (!activity.description) {
@@ -918,6 +917,45 @@ export default {
     };
     
     // Helper function to determine color based on time of day
+    const getDuration = (activity) => {
+      const duration = activity.duration || activity.Duration || activity.estimated_duration || '';
+      // Return as is if it already has proper formatting with units
+      if (typeof duration === 'string' &&
+          (duration.includes('minute') || duration.includes('hour') ||
+           duration.includes('min') || duration.includes('hr'))) {
+        return duration;
+      }
+      
+      // For "0:30" format, convert to "30 minutes"
+      if (typeof duration === 'string' && duration.includes(':')) {
+        const parts = duration.split(':');
+        if (parts.length === 2) {
+          const hours = parseInt(parts[0]);
+          const minutes = parseInt(parts[1]);
+          
+          if (hours > 0 && minutes > 0) {
+            return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} minute${minutes > 1 ? 's' : ''}`;
+          } else if (hours > 0) {
+            return `${hours} hour${hours > 1 ? 's' : ''}`;
+          } else if (minutes > 0) {
+            return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+          }
+        }
+      }
+      
+      // If it's just a number, add "hours"
+      if (duration && !isNaN(duration) && duration.toString().trim() !== '') {
+        const numDuration = parseFloat(duration);
+        if (numDuration >= 1) {
+          return `${Math.floor(numDuration)} hour${numDuration >= 2 ? 's' : ''}`;
+        } else {
+          return `${Math.round(numDuration * 60)} minutes`;
+        }
+      }
+      
+      return '1 hour'; // Default duration
+    };
+    
     const getTimeOfDayColor = (timeStr) => {
       if (!timeStr) return 'primary';
       
@@ -962,6 +1000,7 @@ export default {
       formatDateForTab,
       getWeekdayName,
       getTimeOfDayColor,
+      getDuration,
       isDebugMode,
       rawGeminiResponse,
       useGeneratedItinerary
