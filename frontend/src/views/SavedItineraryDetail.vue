@@ -92,7 +92,7 @@
                 <v-icon color="primary" size="large" class="detail-icon">mdi-clock-outline</v-icon>
                 <div class="detail-content">
                   <div class="text-subtitle-1 font-weight-medium">Daily Schedule</div>
-                  <div>{{ itinerary.dailyStartTime }} - {{ itinerary.dailyEndTime }}</div>
+                  <div>{{ itinerary.dailyStartTime.slice(0,5) }} - {{ itinerary.dailyEndTime.slice(0,5) }}</div>
                 </div>
               </div>
               <div class="travel-detail-item">
@@ -149,7 +149,7 @@
                           <div class="activity-meta">
                             <div v-if="activity.duration" class="meta-item duration">
                               <v-icon small color="primary" class="meta-icon">mdi-clock-outline</v-icon>
-                              <span class="font-weight-medium">Duration:</span> {{ activity.duration }}
+                              <span class="font-weight-medium">Duration:&nbsp;</span> {{ activity.duration }}
                             </div>
                             <div v-if="activity.travelTime || activity.travel_time" class="meta-item travel">
                               <v-icon small color="primary" class="meta-icon">mdi-car</v-icon>

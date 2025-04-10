@@ -140,6 +140,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import GeoAutoComplete from './GeoAutoComplete.vue'
+import authService from '@/services/auth'
 
 export default {
   name: 'TravelForm',
@@ -246,12 +247,24 @@ export default {
       
       try {
         loading.value = true
+        // First ensure we have a valid token
+        if (!authService.isAuthenticated()) {
+          throw new Error('Please log in to generate an itinerary');
+        }
+
+        const token = authService.getToken();
+        console.log('Using token for itinerary request:', token ? 'Token present' : 'No token');
+
         const response = await axios.post('http://localhost:8000/api/itinerary', {
           destination: formData.value.destination,
           startDate: formatDateForAPI(formData.value.startDate),
           endDate: formatDateForAPI(formData.value.endDate),
           numTravelers: formData.value.numTravelers,
           budget: formData.value.budget
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         })
 
         console.log('API Response:', response.data)
@@ -259,10 +272,16 @@ export default {
         router.push('/itinerary')
       } catch (error) {
         console.error('Error generating itinerary:', error)
-        if (error.response?.status === 404) {
+        if (error.message === 'Please log in to generate an itinerary') {
+          alert('Please log in to generate an itinerary')
+        } else if (error.response?.status === 401) {
+          alert('Your session has expired. Please log in again.')
+        } else if (error.response?.status === 404) {
           alert('The itinerary generation service is not available. Please make sure the backend server is running.')
+        } else if (error.response?.status === 503) {
+          alert('Failed to retrieve user preferences. Please make sure you have set up your preferences in your profile.')
         } else {
-          alert('Failed to generate itinerary. Please try again.')
+          alert('Failed to generate itinerary: ' + (error.response?.data?.error || error.message))
         }
       } finally {
         loading.value = false
