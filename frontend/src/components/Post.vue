@@ -174,19 +174,14 @@
                           {{ reply.username }}
                         </router-link>
                         <span class="reply-text">
-                          <template v-if="reply.reply_to_username">
+                          <template v-if="reply.reply_to_user_id">
                             <router-link
                               :to="'/user/' + reply.reply_to_user_id"
                               class="mention"
                             >
-                              @{{ reply.reply_to_username }}
+                              @{{ getUsernameForReply(reply) }}
                             </router-link>
-                            {{
-                              getCommentTextWithoutMention(
-                                reply.comment_text,
-                                reply.reply_to_username
-                              )
-                            }}
+                            {{ reply.comment_text }}
                           </template>
                           <template v-else>
                             {{ reply.comment_text }}
@@ -253,6 +248,7 @@ export default {
   components: {
     FontAwesomeIcon,
   },
+
   data() {
     return {
       heart: faHeart,
@@ -265,6 +261,7 @@ export default {
       required: true,
     },
   },
+  
   setup(props) {
     const hasLiked = ref(false);
     const likesCount = ref(0);
@@ -306,7 +303,7 @@ export default {
         console.error("Error fetching likes:", error);
       }
     };
-
+  
     const fetchComments = async () => {
       try {
         const token = authService.getToken();
@@ -346,6 +343,17 @@ export default {
       }
     };
 
+    onMounted(() => {
+      fetchComments();
+      fetchLikes();
+
+      // Start polling every 5 seconds
+      setInterval(() => {
+        fetchComments();
+        fetchLikes();
+      }, 5000);
+    });
+
     const handleLike = async () => {
       try {
         const token = authService.getToken();
@@ -364,37 +372,59 @@ export default {
       }
     };
 
-    const submitComment = async () => {
-      if (!newComment.value.trim()) return;
+    const replyToComment = (comment, parent = null) => {
+      replyingTo.value = {
+        ...comment,
+        user_id: comment.user_id,
+        username: comment.username
+      };
 
+      parentComment.value = parent || comment;
+      newComment.value = `@${comment.username} `;
+
+      setTimeout(() => {
+        document.querySelector(".dialog-comment-input .comment-input").focus();
+      }, 50);
+    };
+
+    const handleSubmit = async () => {
+      if (isSubmitting.value || !newComment.value.trim()) return;
+
+      isSubmitting.value = true;
       try {
         const token = authService.getToken();
+        const commentData = {
+          post_id: props.post.id,
+          comment: newComment.value.replace(/^@\w+\s+/, ''), // Remove the @mention from the comment text
+          parent_comment_id: replyingTo.value ? parentComment.value.id : null,
+          reply_to_user_id: replyingTo.value ? replyingTo.value.user_id : null
+        };
+
         const response = await fetch(`${API_BASE_URL}/api/social/comment`, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            post_id: props.post.id,
-            comment: newComment.value,
-            parent_comment_id: replyingTo.value?.id || null,
-          }),
+          body: JSON.stringify(commentData)
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to post comment");
+          throw new Error(errorData.error || 'Failed to post comment');
         }
 
         // Clear input and reset reply state
-        newComment.value = "";
+        newComment.value = '';
         replyingTo.value = null;
+        parentComment.value = null;
 
-        // Refresh comments to get updated count
+        // Refresh comments
         await fetchComments();
       } catch (error) {
-        console.error("Error posting comment:", error);
+        console.error('Error posting comment:', error);
+      } finally {
+        isSubmitting.value = false;
       }
     };
 
@@ -428,15 +458,6 @@ export default {
       if (!text || !username) return text;
       // Remove the @username from the beginning of the comment
       return text.replace(new RegExp(`^@${username}\\s*`), "");
-    };
-
-    const replyToComment = (comment, parent = null) => {
-      replyingTo.value = comment;
-      parentComment.value = parent || comment;
-      newComment.value = `@${comment.username} `;
-      setTimeout(() => {
-        document.querySelector(".dialog-comment-input .comment-input").focus();
-      }, 50);
     };
 
     const submitReply = async () => {
@@ -479,19 +500,18 @@ export default {
       }
     };
 
-    const handleSubmit = async () => {
-      if (isSubmitting.value || !newComment.value.trim()) return;
-
-      isSubmitting.value = true;
-      try {
-        if (replyingTo.value) {
-          await submitReply();
-        } else {
-          await submitComment();
+    const getUsernameForReply = (reply) => {
+      if (!reply.reply_to_user_id) return null;
+      // Find the username from either the parent comment or other replies
+      const allComments = comments.value.reduce((acc, comment) => {
+        acc.push(comment);
+        if (comment.replies) {
+          acc.push(...comment.replies);
         }
-      } finally {
-        isSubmitting.value = false;
-      }
+        return acc;
+      }, []);
+      const replyToUser = allComments.find(c => c.user_id === reply.reply_to_user_id);
+      return replyToUser ? replyToUser.username : null;
     };
 
     onMounted(() => {
@@ -509,16 +529,16 @@ export default {
       replyingTo,
       parentComment,
       handleLike,
-      submitComment,
-      formatTime,
-      openComments,
-      replyToComment,
       submitReply,
       displayUsername: props.post.username,
       getCommentTextWithoutMention,
       handleSubmit,
       isSubmitting,
       simplifiedLocation,
+      replyToComment,
+      formatTime,
+      openComments,
+      getUsernameForReply
     };
   },
 };
@@ -709,10 +729,18 @@ export default {
 
 .reply-text {
   color: #262626;
+  margin-left: 4px;
 }
 
 .mention {
   color: #00376b;
+  font-weight: 600;
+  text-decoration: none;
+  margin-right: 4px;
+}
+
+.mention:hover {
+  text-decoration: underline;
 }
 
 .replies {

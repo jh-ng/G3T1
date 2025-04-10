@@ -233,10 +233,42 @@ class AuthService {
       }
 
       const response = await axios.get(`${USER_API_URL}/user/${tokenInfo.user_id}/taste-preferences`);
-      return response.data.taste_preferences;
+      
+      // Log the response for debugging
+      console.log('User preferences response:', response.data);
+      
+      // Check for error responses
+      if (response.data.error) {
+        console.warn('User preferences error:', response.data.error);
+        // Return default preferences instead of throwing
+        return {
+          travel_style: [],
+          tourist_sites: [],
+          diet: [],
+          start_time: "09:00",
+          end_time: "22:00"
+        };
+      }
+      
+      // Ensure we always return an object with the expected structure
+      const preferences = response.data.taste_preferences || {};
+      return {
+        travel_style: preferences.travel_style || [],
+        tourist_sites: preferences.tourist_sites || [],
+        diet: preferences.diet || [],
+        start_time: preferences.start_time || "09:00",
+        end_time: preferences.end_time || "22:00"
+      };
     } catch (error) {
       console.error('Error getting user preferences:', error);
-      throw error;
+      // Return default preferences instead of throwing
+      return {
+        travel_style: [],
+        tourist_sites: [],
+        diet: [],
+        start_time: "09:00",
+        end_time: "22:00"
+      };
     }
   }
 

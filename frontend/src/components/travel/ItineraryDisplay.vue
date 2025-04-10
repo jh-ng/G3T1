@@ -6,7 +6,7 @@
         <v-card class="mb-6 travel-details-card">
           <v-card-title class="text-h5 text-center destination-title">
             <v-icon color="white" size="32" class="destination-icon mr-2">mdi-map-marker</v-icon>
-            {{ travelDetails.destination || 'Travel Details' }}
+            {{ itineraryData?.travelDetails?.destination || 'Travel Details' }}
           </v-card-title>
           <v-card-text>
             <div class="travel-details-container">
@@ -96,7 +96,7 @@
             >
               <div class="tab-content">
                 <div class="day-name">{{ getWeekdayName(date) }}</div>
-                <div class="day-date">Apr {{ new Date(date + 'T12:00:00Z').getUTCDate() }}</div>
+                <div class="day-date">{{ new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).split(', ')[0] }}</div>
               </div>
             </v-btn>
           </div>
@@ -195,6 +195,7 @@ export default {
     const travelDetails = computed(() => {
       if (!props.itineraryData) {
         console.log('No itineraryData found')
+        // const today = new Date().toISOString().split('T')[0]
         return {
           number_of_travelers: 0,
           budget: '-',
@@ -206,13 +207,14 @@ export default {
         }
       }
       
-      // Try different possible properties for travel details
+      // Get details from the specific travelDetails property
       const details = props.itineraryData.travelDetails || 
                        props.itineraryData.travel_details || 
                        props.itineraryData || {}
       
       console.log('Using details:', details)
       
+    //   const today = new Date().toISOString().split('T')[0]
       return {
         number_of_travelers: details.numberOfTravelers || details.number_of_travelers || 0,
         budget: details.budget || '-',
@@ -220,7 +222,7 @@ export default {
         end_date: details.endDate || details.end_date || '-',
         daily_start_time: details.dailyStartTime || details.start_time || details.daily_start_time || '-',
         daily_end_time: details.dailyEndTime || details.end_time || details.daily_end_time || '-',
-        destination: details.destination || 'Travel Details'
+        destination: details.destination || details.travelDestination || details.travel_destination || details.destinationName || 'Travel Details'
       }
     })
     
@@ -253,8 +255,8 @@ export default {
     // Generate all dates in the selected range dynamically without hard-coding
     const fixedDates = computed(() => {
       if (!travelDetails.value) {
-        console.log("Travel details not available, using default date range");
-        return ["2025-04-07", "2025-04-08", "2025-04-09", "2025-04-10", "2025-04-11", "2025-04-12", "2025-04-13"];
+        console.log("Travel details not available");
+        return [];
       }
 
       try {
@@ -270,13 +272,13 @@ export default {
         
         if (!startDate || !endDate) {
           console.error("Failed to parse dates:", startDateStr, endDateStr);
-          return ["2025-04-07", "2025-04-08", "2025-04-09", "2025-04-10", "2025-04-11", "2025-04-12", "2025-04-13"];
+          return [travelDetails.value.start_date];
         }
         
         // Ensure endDate is after or equal to startDate
         if (endDate < startDate) {
           console.error("End date is before start date");
-          return ["2025-04-07", "2025-04-08", "2025-04-09", "2025-04-10", "2025-04-11", "2025-04-12", "2025-04-13"];
+          return [travelDetails.value.start_date];
         }
         
         // Generate all dates in the range (inclusive of end date)
@@ -331,19 +333,18 @@ export default {
           return new Date(Date.UTC(year, month, day, 12, 0, 0));
         }
         
-        // Try to handle "DD MMM YYYY" format (e.g., "7 Apr 2025")
-        if (typeof dateStr === 'string' && dateStr.includes('Apr') && dateStr.includes('202')) {
-          const parts = dateStr.split(' ');
-          if (parts.length === 3) {
-            const day = parseInt(parts[0]);
-            const monthMap = {'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5, 
-                              'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11};
-            const month = monthMap[parts[1]];
-            const year = parseInt(parts[2]);
-            
-            if (!isNaN(day) && month !== undefined && !isNaN(year)) {
-              return new Date(Date.UTC(year, month, day, 12, 0, 0));
-            }
+        // Try to handle "DD MMM YYYY" format (e.g., "7 Jan 2025")
+        const dateRegex = /^(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})$/;
+        const match2 = typeof dateStr === 'string' ? dateStr.match(dateRegex) : null;
+        if (match2) {
+          const day = parseInt(match2[1]);
+          const monthMap = {'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+                          'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11};
+          const month = monthMap[match2[2]];
+          const year = parseInt(match2[3]);
+          
+          if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+            return new Date(Date.UTC(year, month, day, 12, 0, 0));
           }
         }
         
@@ -853,7 +854,7 @@ export default {
         
         // Make sure travelDetails has all the required properties correctly named
         travelDetailsObj = {
-          destination: travelDetailsObj.destination,
+          destination: travelDetailsObj.destination || travelDetailsObj.travelDestination || travelDetailsObj.travel_destination || travelDetailsObj.destinationName,
           startDate: travelDetailsObj.startDate || travelDetailsObj.start_date,
           endDate: travelDetailsObj.endDate || travelDetailsObj.end_date,
           numTravelers: travelDetailsObj.numberOfTravelers || travelDetailsObj.number_of_travelers,
